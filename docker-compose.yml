@@ -1,0 +1,31 @@
+version: '3.9'
+
+networks:
+  yulia-lingo-network:
+    external: true
+
+services:
+  yulia-nginx:
+    image: nginx:latest
+    container_name: yulia-nginx
+    volumes:
+      - ./nginx_data/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx_data/iced-latte.uk.conf:/etc/nginx/conf.d/iced-latte.uk.conf
+      - /etc/letsencrypt:/etc/letsencrypt
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - yulia-lingo-network
+      
+  yulia-lingo:
+    container_name: yulia-lingo
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8443:8443"
+    env_file:
+      - .yulia_lingo_env
+    networks:
+      - yulia-lingo-network
