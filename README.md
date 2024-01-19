@@ -1,7 +1,5 @@
 # Yulia Lingo
 
-### Founded by: Zufar Sunagatov
-
 [![ci Status](https://github.com/Sunagatov/Iced-Latte/actions/workflows/dev-branch-pr-deployment-pipeline.yml/badge.svg)](https://github.com/Sunagatov/Iced-Latte/actions)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/danilqa/node-file-router/blob/main/LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/zufarexplainedit/yulia-lingo-backend.svg)](https://hub.docker.com/r/zufarexplainedit/yulia-lingo-backend/)
