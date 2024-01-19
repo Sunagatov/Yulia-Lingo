@@ -2,7 +2,7 @@ version: '3.9'
 
 networks:
   yulia-lingo-network:
-    external: true
+    attachable: true
 
 services:
   yulia-nginx:
@@ -10,7 +10,7 @@ services:
     container_name: yulia-nginx
     volumes:
       - ./nginx_data/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx_data/iced-latte.uk.conf:/etc/nginx/conf.d/iced-latte.uk.conf
+      - ./nginx_data/yulia-lingo.zufargroup.com.conf:/etc/nginx/conf.d/yulia-lingo.zufargroup.com.conf
       - /etc/letsencrypt:/etc/letsencrypt
     ports:
       - "80:80"
@@ -18,11 +18,9 @@ services:
     networks:
       - yulia-lingo-network
       
-  yulia-lingo:
-    container_name: yulia-lingo
-    build:
-      context: .
-      dockerfile: Dockerfile
+  yulia-lingo-backend:
+    container_name: yulia-lingo-backend
+    image: 'zufarexplainedit/yulia-lingo-backend:latest'
     ports:
       - "8443:8443"
     env_file:
