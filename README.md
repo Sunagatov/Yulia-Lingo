@@ -4,7 +4,6 @@
 
 [![ci Status](https://github.com/Sunagatov/Iced-Latte/actions/workflows/dev-branch-pr-deployment-pipeline.yml/badge.svg)](https://github.com/Sunagatov/Iced-Latte/actions)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/danilqa/node-file-router/blob/main/LICENSE)
-[![Known Vulnerabilities](https://snyk.io/test/github/Sunagatov/Yulia-Lingo/badge.svg)](https://snyk.io/test/github/Sunagatov/Yulia-Lingo)
 [![Docker Pulls](https://img.shields.io/docker/pulls/zufarexplainedit/yulia-lingo-backend.svg)](https://hub.docker.com/r/zufarexplainedit/yulia-lingo-backend/)
 [![GitHub issues](https://img.shields.io/github/issues/Sunagatov/Yulia-Lingo)](https://github.com/Sunagatov/Yulia-Lingo/issues)
 [![GitHub stars](https://img.shields.io/github/stars/Sunagatov/Yulia-Lingo)](https://github.com/Sunagatov/Yulia-Lingo/stargazers)
