@@ -1,2 +1,4 @@
 # Yulia Lingo
-The repository with the project based on Golang
+Your English Learning Telegram Bot
+
+**Founded by:** Zufar Sunagatov
