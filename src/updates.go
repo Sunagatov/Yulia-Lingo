@@ -15,10 +15,11 @@ func launchTelegramBot(telegramBot *tgbotapi.BotAPI) {
 			continue
 		}
 		messageFromUser := telegramBotUpdate.Message.Text
+		chatID := telegramBotUpdate.Message.Chat.ID
 
 		if !isValidWord(messageFromUser) {
 			responseMessage := "Please send a single, valid word in English."
-			messageToUser := tgbotapi.NewMessage(telegramBotUpdate.Message.Chat.ID, responseMessage)
+			messageToUser := tgbotapi.NewMessage(chatID, responseMessage)
 			_, sendingMessageError := telegramBot.Send(messageToUser)
 			if sendingMessageError != nil {
 				log.Printf("Error sending message to a user: %v", sendingMessageError)
@@ -30,7 +31,8 @@ func launchTelegramBot(telegramBot *tgbotapi.BotAPI) {
 			log.Printf("Error fetching from API: %v", err)
 			responseMessage = "Sorry, there was an error processing your request."
 		}
-		messageToUser := tgbotapi.NewMessage(telegramBotUpdate.Message.Chat.ID, responseMessage)
+		messageToUser := tgbotapi.NewMessage(chatID, responseMessage)
+		messageToUser.ParseMode = tgbotapi.ModeMarkdownV2
 
 		_, errorMessage := telegramBot.Send(messageToUser)
 		if errorMessage != nil {
