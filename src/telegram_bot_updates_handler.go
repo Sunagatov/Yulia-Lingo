@@ -32,7 +32,6 @@ func launchTelegramBot(telegramBot *tgbotapi.BotAPI) {
 			responseMessage = "Sorry, there was an error processing your request."
 		}
 		messageToUser := tgbotapi.NewMessage(chatID, responseMessage)
-		messageToUser.ParseMode = tgbotapi.ModeMarkdownV2
 
 		_, errorMessage := telegramBot.Send(messageToUser)
 		if errorMessage != nil {
