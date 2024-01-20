@@ -6,18 +6,18 @@ import (
 	"os"
 )
 
-func initTelegramBot() *tgbotapi.BotAPI {
+func createNewTelegramBot() *tgbotapi.BotAPI {
 	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if botToken == "" {
 		log.Fatal("No TELEGRAM_BOT_TOKEN provided in environment variables")
 	}
 
-	bot, err := tgbotapi.NewBotAPI(botToken)
+	telegramBot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		log.Fatalf("Failed to authorize Telegram bot with token %s: %v", botToken, err)
+		log.Fatalf("Failed to authorize Telegram telegramBot with token %s: %v", botToken, err)
 	}
-	bot.Debug = true
+	telegramBot.Debug = true
 
-	log.Printf("Authorized on Telegram account: %s", bot.Self.UserName)
-	return bot
+	log.Printf("Authorized on Telegram account: %s", telegramBot.Self.UserName)
+	return telegramBot
 }

@@ -1,8 +1,8 @@
 package main
 
 func main() {
-	telegramBot := initTelegramBot()
-	setupWebhook(telegramBot)
+	telegramBot := createNewTelegramBot()
+	setupTelegramBotWebhook(telegramBot)
 	startHTTPServer()
-	listenForTelegramBotUpdates(telegramBot)
+	launchTelegramBot(telegramBot)
 }

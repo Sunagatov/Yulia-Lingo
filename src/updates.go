@@ -6,7 +6,7 @@ import (
 	"regexp"
 )
 
-func listenForTelegramBotUpdates(telegramBot *tgbotapi.BotAPI) {
+func launchTelegramBot(telegramBot *tgbotapi.BotAPI) {
 	updateEndpoint := "/" + telegramBot.Token
 	telegramBotUpdates := telegramBot.ListenForWebhook(updateEndpoint)
 

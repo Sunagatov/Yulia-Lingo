@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func setupWebhook(telegramBot *tgbotapi.BotAPI) {
+func setupTelegramBotWebhook(telegramBot *tgbotapi.BotAPI) {
 	webhookURL := os.Getenv("WEBHOOK_URL")
 	if webhookURL == "" {
 		log.Fatal("No WEBHOOK_URL provided in environment variables")
