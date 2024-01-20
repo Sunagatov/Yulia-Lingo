@@ -1,12 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"strings"
 )
 
 type WordResponseDto struct {
@@ -53,39 +50,4 @@ func createWordsApiHttpRequest(wordsApiUrl string) (*http.Request, error) {
 	newHttpRequest.Header.Add("X-RapidAPI-Key", wordsApiKey)
 	newHttpRequest.Header.Add("X-RapidAPI-Host", "wordsapiv1.p.rapidapi.com")
 	return newHttpRequest, nil
-}
-
-func convertToWordResponseDto(httpResponse *http.Response) (WordResponseDto, error) {
-	var wordResponseDto WordResponseDto
-	httpResponseBody, err := io.ReadAll(httpResponse.Body)
-	if err != nil {
-		return wordResponseDto, err
-	}
-	if err = json.Unmarshal(httpResponseBody, &wordResponseDto); err != nil {
-		return wordResponseDto, err
-	}
-	return wordResponseDto, nil
-}
-
-func formatWordResponse(word string, wordResponse WordResponseDto) (string, error) {
-	var formattedWordResponse strings.Builder
-
-	if wordResponse.Word == "" {
-		formattedWordResponse.WriteString(fmt.Sprintf("I don't know this word: '%s'\n", word))
-		return formattedWordResponse.String(), nil
-	}
-
-	formattedWordResponse.WriteString(fmt.Sprintf("*Word:* %s\n", wordResponse.Word))
-
-	for i, result := range wordResponse.Results {
-		if i > 0 {
-			const delimiter = "\n-------------------------------\n"
-			formattedWordResponse.WriteString(delimiter)
-		}
-
-		formattedWordResponse.WriteString(fmt.Sprintf("*Definition %d:* %s\n", i+1, result.Definition))
-		formattedWordResponse.WriteString(fmt.Sprintf("*Part of Speech:* %s\n", result.PartOfSpeech))
-	}
-
-	return formattedWordResponse.String(), nil
 }
