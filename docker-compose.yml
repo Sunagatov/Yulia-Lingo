@@ -5,25 +5,15 @@ networks:
     attachable: true
 
 services:
-  yulia-nginx:
-    image: nginx:latest
-    container_name: yulia-nginx
-    volumes:
-      - ./nginx_data/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx_data/yulia-lingo.zufargroup.com.conf:/etc/nginx/conf.d/yulia-lingo.zufargroup.com.conf
-      - /etc/letsencrypt:/etc/letsencrypt
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      - yulia-lingo-network
-      
   yulia-lingo-backend:
     container_name: yulia-lingo-backend
-    image: 'zufarexplainedit/yulia-lingo-backend:latest'
-    ports:
-      - "8443:8443"
+    image: 'zufarexplainedit/yulia-lingo-backend:${DOCKER_IMAGE_TAG}'
     env_file:
       - .yulia_lingo_env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8443:8443"
     networks:
       - yulia-lingo-network
