@@ -1,7 +1,7 @@
 package telegram
 
 import (
-	"Yulia-Lingo/internal/api/word"
+	"Yulia-Lingo/internal/word/api"
 	"log"
 	"regexp"
 
@@ -28,7 +28,7 @@ func LaunchTelegramBot(telegramBot *tgbotapi.BotAPI) {
 			}
 			continue
 		}
-		responseMessage, err := word.RequestWordsAPI(messageFromUser)
+		responseMessage, err := api.RequestWordsAPI(messageFromUser)
 		if err != nil {
 			log.Printf("Error fetching from API: %v", err)
 			responseMessage = "Sorry, there was an error processing your request."

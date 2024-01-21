@@ -13,7 +13,7 @@ func SetupTelegramBotWebhook(telegramBot *tgbotapi.BotAPI) {
 		log.Fatal("No WEBHOOK_URL provided in environment variables")
 		return
 	}
-	fullWebhookURL := webhookURL + "/" + telegramBot.Token
+	fullWebhookURL := webhookURL
 
 	webhookConfig, webhookConfigError := tgbotapi.NewWebhook(fullWebhookURL)
 	if webhookConfigError != nil {

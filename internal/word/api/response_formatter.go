@@ -1,11 +1,12 @@
-package word
+package api
 
 import (
+	"Yulia-Lingo/internal/word/words_dto"
 	"fmt"
 	"strings"
 )
 
-func formatWordResponse(word string, wordResponse WordResponseDto) (string, error) {
+func formatWordResponse(word string, wordResponse words_dto.WordResponseDto) (string, error) {
 	var formattedWordResponse strings.Builder
 
 	if wordResponse.Word == "" {

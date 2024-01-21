@@ -1,7 +1,7 @@
-package main
+package db
 
 import (
-	"Yulia-Lingo/internal/model"
+	"Yulia-Lingo/internal/items/model"
 	"database/sql"
 )
 

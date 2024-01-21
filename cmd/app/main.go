@@ -1,14 +1,15 @@
 package main
 
 import (
-	"Yulia-Lingo/internal/config/server"
+	"Yulia-Lingo/internal/server"
+	envFileLoader "Yulia-Lingo/pkg/common"
 	tg "Yulia-Lingo/pkg/telegram"
-	tg_config "Yulia-Lingo/pkg/telegram/config"
 )
 
 func main() {
-	telegramBot := tg_config.CreateNewTelegramBot()
-	tg_config.SetupTelegramBotWebhook(telegramBot)
+	envFileLoader.Load()
+	telegramBot := tg.CreateNewTelegramBot()
+	tg.SetupTelegramBotWebhook(telegramBot)
 	server.StartHTTPServer()
 	tg.LaunchTelegramBot(telegramBot)
 }

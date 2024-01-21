@@ -1,19 +1,10 @@
-package word
+package api
 
 import (
 	"fmt"
 	"net/http"
 	"os"
 )
-
-type WordResponseDto struct {
-	Word    string `json:"word"`
-	Results []struct {
-		Definition   string   `json:"definition"`
-		PartOfSpeech string   `json:"partOfSpeech"`
-		Synonyms     []string `json:"synonyms,omitempty"`
-	} `json:"results"`
-}
 
 func RequestWordsAPI(word string) (string, error) {
 	wordsApiUrl := fmt.Sprintf("https://wordsapiv1.p.rapidapi.com/words/%s", word)
