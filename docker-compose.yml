@@ -1,0 +1,19 @@
+version: '3.9'
+
+networks:
+  yulia-lingo-network:
+    attachable: true
+
+services:
+  yulia-lingo-backend:
+    container_name: yulia-lingo-backend
+    image: 'zufarexplainedit/yulia-lingo-backend:${DOCKER_IMAGE_TAG}'
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8443:8443"
+    networks:
+      - yulia-lingo-network
