@@ -21,7 +21,7 @@ func formatWordResponse(word string, wordResponse WordResponseDto) (string, erro
 			formattedWordResponse.WriteString(delimiter)
 		}
 
-		formattedWordResponse.WriteString(fmt.Sprintf("Definition %d: %s\n", i+1, result.Definition))
+		formattedWordResponse.WriteString(fmt.Sprintf("\nDefinition %d: %s\n", i+1, result.Definition))
 		formattedWordResponse.WriteString(fmt.Sprintf("Part of Speech: %s\n", result.PartOfSpeech))
 	}
 
