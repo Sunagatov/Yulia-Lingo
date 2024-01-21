@@ -13,9 +13,7 @@ func SetupTelegramBotWebhook(telegramBot *tgbotapi.BotAPI) {
 		log.Fatal("No WEBHOOK_URL provided in environment variables")
 		return
 	}
-	fullWebhookURL := webhookURL
-
-	webhookConfig, webhookConfigError := tgbotapi.NewWebhook(fullWebhookURL)
+	webhookConfig, webhookConfigError := tgbotapi.NewWebhook(webhookURL)
 	if webhookConfigError != nil {
 		log.Fatalf("Failed to create webhook: %v", webhookConfigError)
 		return
@@ -35,6 +33,6 @@ func SetupTelegramBotWebhook(telegramBot *tgbotapi.BotAPI) {
 	if info.LastErrorDate != 0 {
 		log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
 	} else {
-		log.Printf("Webhook successfully set to %s", fullWebhookURL)
+		log.Printf("Webhook successfully set to %s", webhookURL)
 	}
 }
