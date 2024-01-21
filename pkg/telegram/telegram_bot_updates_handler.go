@@ -1,12 +1,14 @@
-package main
+package telegram
 
 import (
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"Yulia-Lingo/internal/api/word"
 	"log"
 	"regexp"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func launchTelegramBot(telegramBot *tgbotapi.BotAPI) {
+func LaunchTelegramBot(telegramBot *tgbotapi.BotAPI) {
 	updateEndpoint := "/" + telegramBot.Token
 	telegramBotUpdates := telegramBot.ListenForWebhook(updateEndpoint)
 
@@ -26,7 +28,7 @@ func launchTelegramBot(telegramBot *tgbotapi.BotAPI) {
 			}
 			continue
 		}
-		responseMessage, err := requestWordsAPI(messageFromUser)
+		responseMessage, err := word.RequestWordsAPI(messageFromUser)
 		if err != nil {
 			log.Printf("Error fetching from API: %v", err)
 			responseMessage = "Sorry, there was an error processing your request."

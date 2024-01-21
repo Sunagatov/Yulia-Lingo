@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"database/sql"
@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-func createDatabaseConnection(host string, port string, user string, password string, dbname string) (*sql.DB, error) {
+func CreateDatabaseConnection(host string, port string, user string, password string, dbname string) (*sql.DB, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 

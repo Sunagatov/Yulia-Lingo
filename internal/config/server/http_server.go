@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"log"
@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func startHTTPServer() {
+func StartHTTPServer() {
 	appPort := os.Getenv("APP_PORT")
 	if appPort == "" {
 		log.Fatal("No APP_PORT provided in environment variables")

@@ -1,12 +1,13 @@
-package main
+package telegram
 
 import (
-	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"os"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func setupTelegramBotWebhook(telegramBot *tgbotapi.BotAPI) {
+func SetupTelegramBotWebhook(telegramBot *tgbotapi.BotAPI) {
 	webhookURL := os.Getenv("WEBHOOK_URL")
 	if webhookURL == "" {
 		log.Fatal("No WEBHOOK_URL provided in environment variables")

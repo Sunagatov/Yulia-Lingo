@@ -1,12 +1,13 @@
-package main
+package telegram
 
 import (
-	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"os"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func createNewTelegramBot() *tgbotapi.BotAPI {
+func CreateNewTelegramBot() *tgbotapi.BotAPI {
 	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if botToken == "" {
 		log.Fatal("No TELEGRAM_BOT_TOKEN provided in environment variables")

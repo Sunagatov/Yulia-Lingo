@@ -1,4 +1,4 @@
-package main
+package word
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ type WordResponseDto struct {
 	} `json:"results"`
 }
 
-func requestWordsAPI(word string) (string, error) {
+func RequestWordsAPI(word string) (string, error) {
 	wordsApiUrl := fmt.Sprintf("https://wordsapiv1.p.rapidapi.com/words/%s", word)
 
 	newHttpRequest, err := createWordsApiHttpRequest(wordsApiUrl)
