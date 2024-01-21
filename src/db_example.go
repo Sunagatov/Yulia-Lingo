@@ -2,6 +2,12 @@ package main
 
 import "log"
 
+type Item struct {
+	ID          int
+	Name        string
+	Description string
+}
+
 func database_test() {
 	host := "localhost"
 	port := "5432"
