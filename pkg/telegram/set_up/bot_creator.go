@@ -1,4 +1,4 @@
-package telegram
+package setup
 
 import (
 	"log"

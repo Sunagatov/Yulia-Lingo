@@ -1,0 +1,4 @@
+buttons:
+  save-word:
+    key: Save
+    value: save_word_to_db

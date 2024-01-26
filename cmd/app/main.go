@@ -4,7 +4,8 @@ import (
 	"Yulia-Lingo/internal/db"
 	"Yulia-Lingo/internal/server"
 	"Yulia-Lingo/pkg/common"
-	tg "Yulia-Lingo/pkg/telegram"
+	tgHandler "Yulia-Lingo/pkg/telegram/handler"
+	tg "Yulia-Lingo/pkg/telegram/set_up"
 )
 
 func main() {
@@ -12,9 +13,10 @@ func main() {
 
 	connectDB := db.CreateDatabaseConnection()
 	db.UpMigrations(connectDB)
+	defer db.DB.Close()
 
 	telegramBot := tg.CreateNewTelegramBot()
 	tg.SetupTelegramBotWebhook(telegramBot)
 	server.StartHTTPServer()
-	tg.LaunchTelegramBot(telegramBot)
+	tgHandler.LaunchTelegramBot(telegramBot)
 }

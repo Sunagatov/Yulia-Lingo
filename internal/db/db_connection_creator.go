@@ -12,6 +12,8 @@ import (
 
 const migrationsDir = "migrations"
 
+var DB *sql.DB
+
 func CreateDatabaseConnection() *sql.DB {
 	host := os.Getenv("POSTGRESQL_HOST")
 	port := os.Getenv("POSTGRESQL_PORT")
@@ -24,6 +26,7 @@ func CreateDatabaseConnection() *sql.DB {
 
 	log.Println("Successfully connected to database")
 
+	DB = db
 	return db
 }
 
@@ -39,7 +42,6 @@ func connect(host, port, user, password, dbname string) *sql.DB {
 }
 
 func ping(db *sql.DB) {
-	// Check the connection
 	err := db.Ping()
 	if err != nil {
 		panic(fmt.Sprintf("Error connecting to database: '%v'", err))
