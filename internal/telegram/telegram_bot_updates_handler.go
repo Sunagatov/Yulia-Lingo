@@ -1,7 +1,8 @@
 package telegram
 
 import (
-	"Yulia-Lingo/internal/word/api"
+	"Yulia-Lingo/internal/api"
+	"html" // Import the html package for HTML escaping
 	"log"
 	"regexp"
 
@@ -28,12 +29,12 @@ func LaunchTelegramBot(telegramBot *tgbotapi.BotAPI) {
 			}
 			continue
 		}
-		responseMessage, err := api.RequestWordsAPI(messageFromUser)
+		responseMessage, err := api.RequestTranslateAPI(messageFromUser)
 		if err != nil {
 			log.Printf("Error fetching from API: %v", err)
 			responseMessage = "Sorry, there was an error processing your request."
 		}
-		messageToUser := tgbotapi.NewMessage(chatID, responseMessage)
+		messageToUser := tgbotapi.NewMessage(chatID, html.EscapeString(responseMessage)) // HTML escape the response
 
 		_, errorMessage := telegramBot.Send(messageToUser)
 		if errorMessage != nil {
