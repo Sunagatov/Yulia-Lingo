@@ -3,11 +3,12 @@ package main
 import (
 	"Yulia-Lingo/internal/server"
 	tg "Yulia-Lingo/internal/telegram"
+	"Yulia-Lingo/internal/telegram/handler"
 )
 
 func main() {
-	telegramBot := tg.CreateNewTelegramBot()
-	tg.SetupTelegramBotWebhook(telegramBot)
+	bot := tg.CreateNewTelegramBot()
+	tg.SetupTelegramBotWebhook(bot)
 	server.StartHTTPServer()
-	tg.LaunchTelegramBot(telegramBot)
+	handler.HandleBotUpdates(bot)
 }
