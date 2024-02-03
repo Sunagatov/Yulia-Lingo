@@ -3,54 +3,30 @@ package handler
 import (
 	"Yulia-Lingo/internal/api"
 	tgbutton "Yulia-Lingo/internal/telegram/button"
-	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"regexp"
 )
 
-type TgCommandHandler func(bot *tgbotapi.BotAPI, chatID int64)
-
-var tgCommandHandlers = map[string]TgCommandHandler{
-	tgbutton.StartButtonName:      handleStartButtonClick,
-	tgbutton.MyWordListButtonName: tgbutton.HandleMyWordListButtonClick,
-	tgbutton.SaveWordButtonName:   handleSaveWordButtonClick,
-	tgbutton.VerbsButtonName:      tgbutton.HandleVerbsButtonClick,
-}
-
-func HandleMessageFromUser(bot *tgbotapi.BotAPI, messageFromUser *tgbotapi.Message) {
-	textFromUser := messageFromUser.Text
+func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
+	messageFromUser := botUpdate.Message
 	chatID := messageFromUser.Chat.ID
 
-	tgCommandHandler, ok := tgCommandHandlers[textFromUser]
+	textFromUser := messageFromUser.Text
 
-	if ok {
-		tgCommandHandler(bot, chatID)
-	} else {
+	switch textFromUser {
+	case tgbutton.StartButtonName:
+		tgbutton.HandleStartButtonClick(bot, chatID)
+	case tgbutton.MyWordListButtonName:
+		tgbutton.HandleMyWordListButtonClick(bot, chatID)
+	case tgbutton.IrregularVerbListButtonName:
+		tgbutton.HandleIrregularVerbsListButtonClick(bot, chatID)
+	case tgbutton.SaveWordButtonName:
+		tgbutton.HandleSaveWordButtonClick(bot, chatID)
+	case tgbutton.VerbsButtonName:
+		tgbutton.HandleVerbsButtonClick(bot, chatID)
+	default:
 		handleDefaultCaseUserMessage(bot, textFromUser, chatID)
-	}
-}
-
-func handleSaveWordButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
-	responseText := "Слово сохранено для последующего изучения"
-	msg := tgbotapi.NewMessage(chatID, responseText)
-	_, errorMessage := bot.Send(msg)
-	if errorMessage != nil {
-		log.Printf("Error sending response message: %v", errorMessage)
-	}
-}
-
-func handleStartButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
-	userName := bot.Self.FirstName
-	text := fmt.Sprintf(tgbutton.GreetingMessageToUser, userName)
-	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton(tgbutton.MyWordListButtonName)),
-		tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton(tgbutton.IrregularVerbListButtonName)),
-	)
-	_, errorMessage := bot.Send(msg)
-	if errorMessage != nil {
-		log.Printf("Error sending response message: %v", errorMessage)
 	}
 }
 

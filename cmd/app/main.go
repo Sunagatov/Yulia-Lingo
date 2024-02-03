@@ -1,14 +1,27 @@
 package main
 
 import (
+	database "Yulia-Lingo/internal/db"
 	"Yulia-Lingo/internal/server"
-	tg "Yulia-Lingo/internal/telegram"
-	"Yulia-Lingo/internal/telegram/handler"
+	"fmt"
+	_ "github.com/lib/pq"
+	"net/http"
 )
 
 func main() {
-	bot := tg.CreateNewTelegramBot()
-	tg.SetupTelegramBotWebhook(bot)
-	server.StartHTTPServer()
-	handler.HandleBotUpdates(bot)
+	dbConnection, err := database.CreateDatabaseConnection()
+	if err != nil {
+		panic(fmt.Sprintf("Error opening database: %v", err))
+	}
+
+	err = database.InitDatabase(dbConnection)
+	if err != nil {
+		panic(fmt.Sprintf("Error opening database: %v", err))
+	}
+
+	http.HandleFunc("/irregular-verbs", database.GetIrregularVerbs)
+	err = server.StartHTTPServer()
+	if err != nil {
+		panic(fmt.Sprintf("Error starting HTTP server: %v", err))
+	}
 }

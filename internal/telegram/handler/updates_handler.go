@@ -15,8 +15,8 @@ func HandleBotUpdates(bot *tgbotapi.BotAPI) {
 
 func handleBotUpdate(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 	if botUpdate.Message != nil {
-		HandleMessageFromUser(bot, botUpdate.Message)
+		HandleMessageFromUser(bot, botUpdate)
 	} else if botUpdate.CallbackQuery != nil {
-		HandleCallbackQuery(bot, botUpdate.CallbackQuery)
+		HandleCallbackQuery(bot, botUpdate)
 	}
 }
