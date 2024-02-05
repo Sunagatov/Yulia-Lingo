@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 )
 
 func StartHTTPServer() error {
-	appPort := os.Getenv("APP_PORT")
+	appPort := "8083"
 	if appPort == "" {
-		return fmt.Errorf("nNo APP_PORT provided in environment variables")
+		return fmt.Errorf("no APP_PORT provided in environment variables")
 	}
 	log.Printf("Starting HTTP server on port %s", appPort)
 
-	if httpServerError := http.ListenAndServe("0.0.0.0:"+appPort, nil); httpServerError != nil {
-		return fmt.Errorf("failed to start HTTP server: %v", httpServerError)
+	err := http.ListenAndServe("0.0.0.0:"+appPort, nil)
+	if err != nil {
+		return fmt.Errorf("failed to start HTTP server: %v", err)
 	}
 	log.Printf("Server running on :%s...\n", appPort)
 	return nil

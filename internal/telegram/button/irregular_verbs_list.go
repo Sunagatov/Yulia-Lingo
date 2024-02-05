@@ -1,6 +1,8 @@
 package button
 
 import (
+	"database/sql"
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"math"
@@ -8,68 +10,44 @@ import (
 	"strings"
 )
 
-var irregularVerbs = []string{
-	"Идти - [Go - Went - Gone]",
-	"Петь - [Sing - Sang - Sung]",
-	"Есть - [Eat - Ate - Eaten]",
-	"Спать - [Sleep - Slept - Slept]",
-	"Говорить - [Speak - Spoke - Spoken]",
-	"Брать - [Take - Took - Taken]",
-	"Бежать - [Run - Ran - Run]",
-	"Читать - [Read - Read - Read]",
-	"Писать - [Write - Wrote - Written]",
-	"Плавать - [Swim - Swam - Swum]",
-	"Лететь - [Fly - Flew - Flown]",
-	"Водить - [Drive - Drove - Driven]",
-	"Ломать - [Break - Broke - Broken]",
-	"Строить - [Build - Built - Built]",
-	"Выбирать - [Choose - Chose - Chosen]",
-	"Забывать - [Forget - Forgot - Forgotten]",
-	"Встречать - [Meet - Met - Met]",
-	"Думать - [Think - Thought - Thought]",
-	"Учить - [Teach - Taught - Taught]",
-	"Видеть - [See - Saw - Seen]",
-	"Пить - [Drink - Drank - Drunk]",
-	"Иметь - [Have - Had - Had]",
-	"Делать - [Do - Did - Done]",
-	"Говорить - [Say - Said - Said]",
-	"Покупать - [Buy - Bought - Bought]",
-	"Ломать - [Break - Broke - Broken]",
-	"Начинать - [Begin - Began - Begun]",
-	"Выбирать - [Choose - Chose - Chosen]",
-	"Падать - [Fall - Fell - Fallen]",
-	"Знать - [Know - Knew - Known]",
-	"Говорить - [Speak - Spoke - Spoken]",
-	"Спать - [Sleep - Slept - Slept]",
-	"Находить - [Find - Found - Found]",
-	"Терять - [Lose - Lost - Lost]",
-	"Выигрывать - [Win - Won - Won]",
-	"Рисовать - [Draw - Drew - Drawn]",
-	"Держать - [Hold - Held - Held]",
-	"Делать - [Make - Made - Made]",
-	"Платить - [Pay - Paid - Paid]",
-}
-
 const (
 	IrregularVerbsPerPage = 10
 )
 
+type IrregularVerb struct {
+	ID    int    `json:"id"`
+	Verb  string `json:"verb"`
+	Past  string `json:"past"`
+	PastP string `json:"past_participle"`
+}
+
 var userContext = make(map[int64]int)
 
-func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
+func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, db *sql.DB, chatID int64) {
 	// Get the current page number from the user's context
 	currentPage := getCurrentPage(chatID)
 
 	// Calculate the total number of pages
-	totalPages := int(math.Ceil(float64(len(irregularVerbs)) / IrregularVerbsPerPage))
+	totalVerbs, err := getTotalIrregularVerbsCount(db)
+	if err != nil {
+		log.Printf("Error getting total irregular verbs count: %v", err)
+		return
+	}
+	totalPages := int(math.Ceil(float64(totalVerbs) / IrregularVerbsPerPage))
 
-	// Get the current page's verbs
-	startIndex := (currentPage - 1) * IrregularVerbsPerPage
-	endIndex := startIndex + IrregularVerbsPerPage
-	currentPageVerbs := irregularVerbs[startIndex:min(endIndex, len(irregularVerbs))]
+	// Get the current page's verbs from the database
+	offset := (currentPage - 1) * IrregularVerbsPerPage
+	verbs, err := getIrregularVerbs(db, offset, IrregularVerbsPerPage)
+	if err != nil {
+		log.Printf("Error getting irregular verbs: %v", err)
+		return
+	}
 
 	// Create the message text with the current page's verbs
-	messageText := strings.Join(currentPageVerbs, "\n")
+	var messageText string
+	for _, verb := range verbs {
+		messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Verb, verb.Past, verb.PastP)
+	}
 
 	// Send the message to the user
 	messageToUser := tgbotapi.NewMessage(chatID, messageText)
@@ -79,6 +57,41 @@ func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
 	if errorMessage != nil {
 		log.Printf("Error sending response message: %v", errorMessage)
 	}
+}
+
+func getTotalIrregularVerbsCount(db *sql.DB) (int, error) {
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM irregular_verbs").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("error getting total irregular verbs count: %v", err)
+	}
+	return count, nil
+}
+
+func getIrregularVerbs(db *sql.DB, offset, limit int) ([]IrregularVerb, error) {
+	query := "SELECT id, verb, past, past_participle FROM irregular_verbs ORDER BY id LIMIT $1 OFFSET $2"
+	rows, err := db.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("error executing database query: %v", err)
+	}
+	defer rows.Close()
+
+	var verbs []IrregularVerb
+
+	for rows.Next() {
+		var verb IrregularVerb
+		err := rows.Scan(&verb.ID, &verb.Verb, &verb.Past, &verb.PastP)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning row: %v", err)
+		}
+		verbs = append(verbs, verb)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over rows: %v", err)
+	}
+
+	return verbs, nil
 }
 
 func createInlineKeyboard(currentPage, totalPages int) tgbotapi.InlineKeyboardMarkup {

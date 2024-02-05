@@ -11,7 +11,6 @@ func HandleStartButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
 	text := fmt.Sprintf(GreetingMessageToUser, userName)
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton(MyWordListButtonName)),
 		tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton(IrregularVerbListButtonName)),
 	)
 	_, errorMessage := bot.Send(msg)
