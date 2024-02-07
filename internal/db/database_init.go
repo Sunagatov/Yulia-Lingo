@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -17,9 +16,14 @@ type IrregularVerb struct {
 }
 
 // InitDatabase initializes the database and inserts irregular verbs data
-func InitDatabase(db *sql.DB) error {
+func InitDatabase() error {
+	db, err := GetPostgresClient()
+	if err != nil {
+		return fmt.Errorf("database wosn't conecteedm, err: %v", err)
+	}
+
 	log.Println("Dropping existing table...")
-	_, err := db.Exec("DROP TABLE IF EXISTS irregular_verbs")
+	_, err = db.Exec("DROP TABLE IF EXISTS irregular_verbs")
 	if err != nil {
 		return fmt.Errorf("dropping existing table failed: %v", err)
 	}

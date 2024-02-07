@@ -8,7 +8,12 @@ import (
 	"os"
 )
 
-func CreateDatabaseConnection() (*sql.DB, error) {
+var (
+	postgres *sql.DB
+	err      error
+)
+
+func CreateDatabaseConnection() {
 	host := os.Getenv("POSTGRESQL_HOST")
 	port := os.Getenv("POSTGRESQL_PORT")
 	user := os.Getenv("POSTGRESQL_USER")
@@ -17,15 +22,22 @@ func CreateDatabaseConnection() (*sql.DB, error) {
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 
-	db, err := sql.Open("postgres", psqlInfo)
+	postgres, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
-		return nil, fmt.Errorf("error connecting to database: %v", err)
+		log.Fatalf("error connecting to database: %v", err)
 	}
 
-	err = db.Ping()
-	if err != nil {
-		return nil, fmt.Errorf("error pinging the database: %v", err)
+	if err = postgres.Ping(); err != nil {
+		log.Fatalf("error pinging the database: %v", err)
 	}
+
 	log.Println("Successfully connected to database")
-	return db, nil
+}
+
+func CloseDatabaseConnection() {
+	postgres.Close()
+}
+
+func GetPostgresClient() (*sql.DB, error) {
+	return postgres, err
 }

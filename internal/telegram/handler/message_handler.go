@@ -3,13 +3,12 @@ package handler
 import (
 	"Yulia-Lingo/internal/api"
 	tgbutton "Yulia-Lingo/internal/telegram/button"
-	"database/sql"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"regexp"
 )
 
-func HandleMessageFromUser(bot *tgbotapi.BotAPI, db *sql.DB, botUpdate tgbotapi.Update) {
+func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 	messageFromUser := botUpdate.Message
 	chatID := messageFromUser.Chat.ID
 
@@ -19,7 +18,7 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, db *sql.DB, botUpdate tgbotapi.
 	case tgbutton.StartButtonName:
 		tgbutton.HandleStartButtonClick(bot, chatID)
 	case tgbutton.IrregularVerbListButtonName:
-		tgbutton.HandleIrregularVerbsListButtonClick(bot, db, chatID)
+		tgbutton.HandleIrregularVerbsListButtonClick(bot, chatID)
 	default:
 		handleDefaultCaseUserMessage(bot, textFromUser, chatID)
 	}
