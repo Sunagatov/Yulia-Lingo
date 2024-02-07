@@ -4,7 +4,6 @@ import (
 	"Yulia-Lingo/internal/telegram"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"log"
 )
 
 func HandleBotUpdates() error {
@@ -14,7 +13,6 @@ func HandleBotUpdates() error {
 	}
 	botUpdates := bot.ListenForWebhook("/")
 	for telegramBotUpdate := range botUpdates {
-		log.Printf(telegramBotUpdate.Message.Text)
 		handleBotUpdate(bot, telegramBotUpdate)
 	}
 	return nil
