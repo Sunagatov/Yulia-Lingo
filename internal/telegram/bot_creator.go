@@ -1,32 +1,25 @@
 package telegram
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-var (
-	bot *tgbotapi.BotAPI
-	err error
-)
-
-func CreateNewTelegramBot() {
+func CreateNewTelegramBot() (*tgbotapi.BotAPI, error) {
 	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if botToken == "" {
-		log.Fatalf("no TELEGRAM_BOT_TOKEN provided in environment variables")
+		return nil, fmt.Errorf("no TELEGRAM_BOT_TOKEN provided in environment variables")
 	}
 
-	bot, err = tgbotapi.NewBotAPI(botToken)
+	telegramBot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		log.Fatalf("failed to authorize Telegram telegramBot with token %s: %v", botToken, err)
+		return nil, fmt.Errorf("failed to authorize Telegram telegramBot with token %s: %v", botToken, err)
 	}
-	bot.Debug = true
+	telegramBot.Debug = true
 
-	log.Printf("Authorized on Telegram account: %s", bot.Self.UserName)
-}
-
-func GetTelegramBot() (*tgbotapi.BotAPI, error) {
-	return bot, err
+	log.Printf("Authorized on Telegram account: %s", telegramBot.Self.UserName)
+	return telegramBot, nil
 }
