@@ -15,10 +15,11 @@ const (
 )
 
 type IrregularVerb struct {
-	ID    int    `json:"id"`
-	Verb  string `json:"verb"`
-	Past  string `json:"past"`
-	PastP string `json:"past_participle"`
+	ID        int    `json:"id"`
+	Original  string `json:"original"`
+	Translate string `json:"translate"`
+	Past      string `json:"past"`
+	PastP     string `json:"past_participle"`
 }
 
 var userContext = make(map[int64]int)
@@ -46,7 +47,7 @@ func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
 	// Create the message text with the current page's verbs
 	var messageText string
 	for _, verb := range verbs {
-		messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Verb, verb.Past, verb.PastP)
+		messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Translate, verb.Past, verb.PastP)
 	}
 
 	// Send the message to the user
@@ -79,7 +80,7 @@ func getIrregularVerbs(offset, limit int) ([]IrregularVerb, error) {
 		return nil, fmt.Errorf("can't connect to postgres, err: %v", err)
 	}
 
-	query := "SELECT id, verb, past, past_participle FROM irregular_verbs ORDER BY id LIMIT $1 OFFSET $2"
+	query := "SELECT id, translated, original, past, past_participle FROM irregular_verbs ORDER BY id LIMIT $1 OFFSET $2"
 	rows, err := db.Query(query, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("error executing database query: %v", err)
@@ -90,7 +91,7 @@ func getIrregularVerbs(offset, limit int) ([]IrregularVerb, error) {
 
 	for rows.Next() {
 		var verb IrregularVerb
-		err := rows.Scan(&verb.ID, &verb.Verb, &verb.Past, &verb.PastP)
+		err := rows.Scan(&verb.ID, &verb.Translate, &verb.Original, &verb.Past, &verb.PastP)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %v", err)
 		}
@@ -128,14 +129,6 @@ func getCurrentPage(chatID int64) int {
 		return page
 	}
 	return 1
-}
-
-// Function to calculate the minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func ExtractPageNumber(callbackData string) int {

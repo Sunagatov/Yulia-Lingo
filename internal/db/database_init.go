@@ -59,6 +59,7 @@ func InitDatabase() error {
 			return fmt.Errorf("database initialization failed: %v", err)
 		}
 	}
+
 	log.Println("Irregular verbs data inserted successfully.")
 
 	log.Println("Database initialization completed successfully.")
@@ -81,8 +82,8 @@ func getIrregularVerbParts(irregularVerb string) (*IrregularVerb, error) {
 
 	return &IrregularVerb{
 		Original:       original,
-		Past:           verbParts[0],
-		PastParticiple: verbParts[1],
-		Translated:     verbParts[2],
+		Past:           verbParts[1],
+		PastParticiple: verbParts[2],
+		Translated:     verbParts[0],
 	}, nil
 }
