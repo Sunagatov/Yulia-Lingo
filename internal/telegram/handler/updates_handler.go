@@ -1,23 +1,29 @@
 package handler
 
 import (
-	"database/sql"
+	"Yulia-Lingo/internal/telegram"
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func HandleBotUpdates(bot *tgbotapi.BotAPI, db *sql.DB) {
+func HandleBotUpdates() error {
+	bot, err := telegram.GetTelegramBot()
+	if err != nil {
+		return fmt.Errorf("app wosn't connect to telegram bot, err: %v", err)
+	}
 	updateEndpoint := "/" + bot.Token
 	botUpdates := bot.ListenForWebhook(updateEndpoint)
 
 	for telegramBotUpdate := range botUpdates {
-		handleBotUpdate(bot, db, telegramBotUpdate)
+		handleBotUpdate(bot, telegramBotUpdate)
 	}
+	return nil
 }
 
-func handleBotUpdate(bot *tgbotapi.BotAPI, db *sql.DB, botUpdate tgbotapi.Update) {
+func handleBotUpdate(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 	if botUpdate.Message != nil {
-		HandleMessageFromUser(bot, db, botUpdate)
+		HandleMessageFromUser(bot, botUpdate)
 	} else if botUpdate.CallbackQuery != nil {
-		HandleCallbackQuery(bot, db, botUpdate)
+		HandleCallbackQuery(bot, botUpdate)
 	}
 }

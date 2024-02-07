@@ -1,7 +1,7 @@
 package button
 
 import (
-	"database/sql"
+	database "Yulia-Lingo/internal/db"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
@@ -23,12 +23,12 @@ type IrregularVerb struct {
 
 var userContext = make(map[int64]int)
 
-func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, db *sql.DB, chatID int64) {
+func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
 	// Get the current page number from the user's context
 	currentPage := getCurrentPage(chatID)
 
 	// Calculate the total number of pages
-	totalVerbs, err := getTotalIrregularVerbsCount(db)
+	totalVerbs, err := getTotalIrregularVerbsCount()
 	if err != nil {
 		log.Printf("Error getting total irregular verbs count: %v", err)
 		return
@@ -37,7 +37,7 @@ func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, db *sql.DB, chatI
 
 	// Get the current page's verbs from the database
 	offset := (currentPage - 1) * IrregularVerbsPerPage
-	verbs, err := getIrregularVerbs(db, offset, IrregularVerbsPerPage)
+	verbs, err := getIrregularVerbs(offset, IrregularVerbsPerPage)
 	if err != nil {
 		log.Printf("Error getting irregular verbs: %v", err)
 		return
@@ -59,16 +59,26 @@ func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, db *sql.DB, chatI
 	}
 }
 
-func getTotalIrregularVerbsCount(db *sql.DB) (int, error) {
+func getTotalIrregularVerbsCount() (int, error) {
+	db, err := database.GetPostgresClient()
+	if err != nil {
+		return 0, fmt.Errorf("can't connect to postgres, err: %v", err)
+	}
+
 	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM irregular_verbs").Scan(&count)
+	err = db.QueryRow("SELECT COUNT(*) FROM irregular_verbs").Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("error getting total irregular verbs count: %v", err)
 	}
-	return count, nil
+	return count, err
 }
 
-func getIrregularVerbs(db *sql.DB, offset, limit int) ([]IrregularVerb, error) {
+func getIrregularVerbs(offset, limit int) ([]IrregularVerb, error) {
+	db, err := database.GetPostgresClient()
+	if err != nil {
+		return nil, fmt.Errorf("can't connect to postgres, err: %v", err)
+	}
+
 	query := "SELECT id, verb, past, past_participle FROM irregular_verbs ORDER BY id LIMIT $1 OFFSET $2"
 	rows, err := db.Query(query, limit, offset)
 	if err != nil {
