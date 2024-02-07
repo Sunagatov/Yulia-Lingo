@@ -11,9 +11,7 @@ func HandleBotUpdates() error {
 	if err != nil {
 		return fmt.Errorf("app wosn't connect to telegram bot, err: %v", err)
 	}
-	updateEndpoint := "/" + bot.Token
-	botUpdates := bot.ListenForWebhook(updateEndpoint)
-
+	botUpdates := bot.ListenForWebhook("/")
 	for telegramBotUpdate := range botUpdates {
 		handleBotUpdate(bot, telegramBotUpdate)
 	}

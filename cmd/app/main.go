@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Yulia-Lingo/internal/connections"
 	database "Yulia-Lingo/internal/db"
 	"Yulia-Lingo/internal/server"
 	tg "Yulia-Lingo/internal/telegram"
@@ -10,6 +11,8 @@ import (
 )
 
 func main() {
+	connections.Init()
+
 	database.CreateDatabaseConnection()
 	defer database.CloseDatabaseConnection()
 
@@ -19,7 +22,6 @@ func main() {
 	}
 
 	tg.CreateNewTelegramBot()
-
 	err = tg.SetupTelegramBotWebhook()
 	if err != nil {
 		log.Fatalf("Error creating telegram bot webhook: %v", err)
