@@ -2,6 +2,7 @@ package button
 
 import (
 	database "Yulia-Lingo/internal/db"
+	"Yulia-Lingo/internal/telegram/message"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
@@ -24,7 +25,7 @@ type IrregularVerb struct {
 
 var userContext = make(map[int64]int)
 
-func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
+func HandleIrregularVerbsListButtonClick(chatID int64) {
 	// Get the current page number from the user's context
 	currentPage := getCurrentPage(chatID)
 
@@ -54,7 +55,7 @@ func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
 	messageToUser := tgbotapi.NewMessage(chatID, messageText)
 	messageToUser.ReplyMarkup = createInlineKeyboard(currentPage, totalPages)
 
-	_, errorMessage := bot.Send(messageToUser)
+	errorMessage := message.Send(&messageToUser)
 	if errorMessage != nil {
 		log.Printf("Error sending response message: %v", errorMessage)
 	}

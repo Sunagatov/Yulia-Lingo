@@ -4,8 +4,8 @@ import (
 	"Yulia-Lingo/internal/connections"
 	database "Yulia-Lingo/internal/db"
 	"Yulia-Lingo/internal/server"
-	tg "Yulia-Lingo/internal/telegram"
 	"Yulia-Lingo/internal/telegram/handler"
+	"Yulia-Lingo/internal/telegram/setup"
 	_ "github.com/lib/pq"
 	"log"
 )
@@ -21,8 +21,8 @@ func main() {
 		log.Fatalf("Error database init: %v", err)
 	}
 
-	tg.CreateNewTelegramBot()
-	err = tg.SetupTelegramBotWebhook()
+	setup.CreateNewTelegramBot()
+	err = setup.SetupTelegramBotWebhook()
 	if err != nil {
 		log.Fatalf("Error creating telegram bot webhook: %v", err)
 	}
