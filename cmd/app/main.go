@@ -1,18 +1,16 @@
 package main
 
 import (
-	"Yulia-Lingo/internal/connections"
 	database "Yulia-Lingo/internal/db"
-	"Yulia-Lingo/internal/server"
 	"Yulia-Lingo/internal/telegram/handler"
-	"Yulia-Lingo/internal/telegram/setup"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
 	"log"
+	"net/http"
+	"os"
 )
 
 func main() {
-	connections.Init()
-
 	database.CreateDatabaseConnection()
 	defer database.CloseDatabaseConnection()
 
@@ -21,19 +19,67 @@ func main() {
 		log.Fatalf("Error database init: %v", err)
 	}
 
-	setup.CreateNewTelegramBot()
-	err = setup.SetupTelegramBotWebhook()
+	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	if botToken == "" {
+		log.Fatalf("no TELEGRAM_BOT_TOKEN provided in environment variables")
+	}
+	log.Println("botToken: " + botToken)
+
+	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		log.Fatalf("Error creating telegram bot webhook: %v", err)
+		log.Fatal(err)
 	}
 
-	err = server.StartHTTPServer()
-	if err != nil {
-		log.Fatalf("Error starting HTTP server: %v", err)
+	bot.Debug = true
+
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
+	webhookURL := os.Getenv("TELEGRAM_WEBHOOK_URL")
+	if webhookURL == "" {
+		log.Fatalf("no WEBHOOK_URL provided in environment variables")
 	}
 
-	err = handler.HandleBotUpdates()
+	log.Println("webhookURL: " + webhookURL)
+
+	wh, _ := tgbotapi.NewWebhook(webhookURL)
+
+	_, err = bot.Request(wh)
 	if err != nil {
-		log.Fatalf("Error starting handle  bot updates: %v", err)
+		log.Fatal(err)
+	}
+
+	info, err := bot.GetWebhookInfo()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if info.LastErrorDate != 0 {
+		log.Fatalf("Telegram callback failed: %s", info.LastErrorMessage)
+	}
+
+	updates := bot.ListenForWebhook("/" + bot.Token)
+
+	appPort := os.Getenv("APP_PORT")
+	if appPort == "" {
+		log.Fatalf("no APP_PORT provided in environment variables")
+	}
+
+	log.Printf("Starting HTTP server on port %s", appPort)
+
+	go func() {
+		err := http.ListenAndServe("0.0.0.0:"+appPort, nil)
+		if err != nil {
+			log.Fatalf("failed to start HTTP server: %v", err)
+		}
+	}()
+
+	log.Printf("Server running on :%s...\n", appPort)
+
+	for update := range updates {
+		if update.Message != nil {
+			handler.HandleMessageFromUser(bot, update)
+		} else if update.CallbackQuery != nil {
+			handler.HandleCallbackQuery(bot, update)
+		}
 	}
 }

@@ -2,7 +2,6 @@ package button
 
 import (
 	database "Yulia-Lingo/internal/db"
-	"Yulia-Lingo/internal/telegram/message"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
@@ -25,11 +24,9 @@ type IrregularVerb struct {
 
 var userContext = make(map[int64]int)
 
-func HandleIrregularVerbsListButtonClick(chatID int64) {
-	// Get the current page number from the user's context
+func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
 	currentPage := getCurrentPage(chatID)
 
-	// Calculate the total number of pages
 	totalVerbs, err := getTotalIrregularVerbsCount()
 	if err != nil {
 		log.Printf("Error getting total irregular verbs count: %v", err)
@@ -37,7 +34,6 @@ func HandleIrregularVerbsListButtonClick(chatID int64) {
 	}
 	totalPages := int(math.Ceil(float64(totalVerbs) / IrregularVerbsPerPage))
 
-	// Get the current page's verbs from the database
 	offset := (currentPage - 1) * IrregularVerbsPerPage
 	verbs, err := getIrregularVerbs(offset, IrregularVerbsPerPage)
 	if err != nil {
@@ -45,17 +41,15 @@ func HandleIrregularVerbsListButtonClick(chatID int64) {
 		return
 	}
 
-	// Create the message text with the current page's verbs
 	var messageText string
 	for _, verb := range verbs {
 		messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Translate, verb.Past, verb.PastP)
 	}
 
-	// Send the message to the user
 	messageToUser := tgbotapi.NewMessage(chatID, messageText)
 	messageToUser.ReplyMarkup = createInlineKeyboard(currentPage, totalPages)
 
-	errorMessage := message.Send(&messageToUser)
+	_, errorMessage := bot.Send(&messageToUser)
 	if errorMessage != nil {
 		log.Printf("Error sending response message: %v", errorMessage)
 	}
@@ -117,15 +111,11 @@ func createInlineKeyboard(currentPage, totalPages int) tgbotapi.InlineKeyboardMa
 	return tgbotapi.NewInlineKeyboardMarkup(rows)
 }
 
-// Function to get the callback data for pagination
 func getPaginationCallbackData(pageNumber int) string {
 	return "irregular_verbs_page_" + strconv.Itoa(pageNumber)
 }
 
-// Function to get the current page number from user's context
 func getCurrentPage(chatID int64) int {
-	// You may use a database or another storage mechanism to store user's context
-	// For simplicity, a map is used here
 	if page, ok := userContext[chatID]; ok {
 		return page
 	}
@@ -142,7 +132,5 @@ func ExtractPageNumber(callbackData string) int {
 }
 
 func UpdateCurrentPage(chatID int64, pageNumber int) {
-	// You may use a database or another storage mechanism to store user's context
-	// For simplicity, a map is used here
 	userContext[chatID] = pageNumber
 }

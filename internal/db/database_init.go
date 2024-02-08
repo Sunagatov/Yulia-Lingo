@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// IrregularVerb represents the structure of irregular verbs
 type IrregularVerb struct {
 	ID             int    `json:"id"`
 	Translated     string `json:"translated"`
@@ -15,7 +14,6 @@ type IrregularVerb struct {
 	PastParticiple string `json:"past_participle"`
 }
 
-// InitDatabase initializes the database and inserts irregular verbs data
 func InitDatabase() error {
 	db, err := GetPostgresClient()
 	if err != nil {
@@ -66,7 +64,6 @@ func InitDatabase() error {
 	return nil
 }
 
-// getIrregularVerbParts parses the irregular verb string and returns its parts
 func getIrregularVerbParts(irregularVerb string) (*IrregularVerb, error) {
 	parts := strings.Split(irregularVerb, ";")
 	if len(parts) != 2 {

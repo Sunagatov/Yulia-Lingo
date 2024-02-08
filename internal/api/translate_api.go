@@ -3,9 +3,12 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -26,6 +29,43 @@ type TranslationEntry struct {
 	Word                string   `json:"word"`
 	ReverseTranslations []string `json:"reverse_translation"`
 	Score               float64  `json:"score"`
+}
+
+func inputWordValidator(bot *tgbotapi.BotAPI, textFromUser string, chatID int64) error {
+	if !isValidWord(textFromUser) {
+		responseMessage := "Пожалуйста, отправьте корректное слово на английском языке"
+		messageToUser := tgbotapi.NewMessage(chatID, responseMessage)
+		_, sendingMessageError := bot.Send(&messageToUser)
+		if sendingMessageError != nil {
+			return fmt.Errorf("error sending message to a user: %v", sendingMessageError)
+		}
+		return fmt.Errorf("incorrect format of text")
+	}
+
+	return nil
+}
+
+func translateInputWords(textFromUser string, chatID int64) tgbotapi.MessageConfig {
+	responseMessage, err := RequestTranslateAPI(textFromUser)
+	if err != nil {
+		log.Printf("Error fetching from API: %v", err)
+		responseMessage = "Sorry, there was an error processing your request."
+	}
+	return tgbotapi.NewMessage(chatID, responseMessage)
+}
+
+func addKeyboardMarkup(messageToUser *tgbotapi.MessageConfig) {
+	messageToUser.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Сохранить", "save_word_option"),
+		),
+	)
+}
+
+func isValidWord(word string) bool {
+	const pattern = `^[A-Za-z]+$`
+	matched, _ := regexp.MatchString(pattern, word)
+	return matched
 }
 
 func RequestTranslateAPI(wordToTranslate string) (string, error) {

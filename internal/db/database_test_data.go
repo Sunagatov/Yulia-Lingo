@@ -40,6 +40,4 @@ var irregularVerbs = []string{
 	"Держать;Hold - Held - Held",
 	"Делать;Make - Made - Made",
 	"Платить;Pay - Paid - Paid",
-	// Add other verbs with the same format
-	// ...
 }
