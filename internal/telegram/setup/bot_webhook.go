@@ -1,4 +1,4 @@
-package telegram
+package setup
 
 import (
 	"fmt"
@@ -14,6 +14,14 @@ func SetupTelegramBotWebhook() error {
 		return fmt.Errorf("app wosn't connect to telegram bot, err: %v", err)
 	}
 
+	if err = startCheckup(telegramBot); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func startCheckup(telegramBot *tgbotapi.BotAPI) error {
 	webhookURL := os.Getenv("TELEGRAM_WEBHOOK_URL")
 	if webhookURL == "" {
 		return fmt.Errorf("no WEBHOOK_URL provided in environment variables")
@@ -37,7 +45,6 @@ func SetupTelegramBotWebhook() error {
 	if info.LastErrorDate != 0 {
 		return fmt.Errorf("telegram callback failed: %s", info.LastErrorMessage)
 	}
-
 	log.Printf("Webhook successfully set to %s", webhookURL)
 	return nil
 }
