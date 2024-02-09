@@ -25,6 +25,20 @@ type IrregularVerb struct {
 var userContext = make(map[int64]int)
 
 func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboard := CreateLetterKeyboardMarkup()
+
+	messageText := "С какой буквы вы хотите начать изучение неправильных глаголов?"
+
+	message := tgbotapi.NewMessage(chatID, messageText)
+	message.ReplyMarkup = keyboard
+
+	_, err := bot.Send(&message)
+	if err != nil {
+		log.Printf("Error sending message: %v", err)
+	}
+}
+
+func HandleIrregularVerbsListButtonClic2k(bot *tgbotapi.BotAPI, chatID int64) {
 	currentPage := getCurrentPage(chatID)
 
 	totalVerbs, err := getTotalIrregularVerbsCount()

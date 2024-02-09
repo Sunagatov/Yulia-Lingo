@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
-	"log"
 	"os"
 )
 
@@ -13,7 +12,7 @@ var (
 	err      error
 )
 
-func CreateDatabaseConnection() {
+func CreateDatabaseConnection() error {
 	host := os.Getenv("POSTGRESQL_HOST")
 	port := os.Getenv("POSTGRESQL_PORT")
 	user := os.Getenv("POSTGRESQL_USER")
@@ -24,14 +23,14 @@ func CreateDatabaseConnection() {
 
 	postgres, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
-		log.Fatalf("error connecting to database: %v", err)
+		return fmt.Errorf("error connecting to database: %v", err)
 	}
 
 	if err = postgres.Ping(); err != nil {
-		log.Fatalf("error pinging the database: %v", err)
+		return fmt.Errorf("error pinging the database: %v", err)
 	}
 
-	log.Println("Successfully connected to database")
+	return nil
 }
 
 func CloseDatabaseConnection() {

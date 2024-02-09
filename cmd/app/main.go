@@ -1,9 +1,9 @@
 package main
 
 import (
-	database "Yulia-Lingo/internal/db"
+	dbManager "Yulia-Lingo/internal/db"
+	botManager "Yulia-Lingo/internal/telegram/bot_manager"
 	"Yulia-Lingo/internal/telegram/handler"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
 	"log"
 	"net/http"
@@ -11,75 +11,55 @@ import (
 )
 
 func main() {
-	database.CreateDatabaseConnection()
-	defer database.CloseDatabaseConnection()
-
-	err := database.InitDatabase()
+	err := dbManager.CreateDatabaseConnection()
 	if err != nil {
-		log.Fatalf("Error database init: %v", err)
+		log.Fatalf("Error creating database connection: %v", err)
 	}
+	defer dbManager.CloseDatabaseConnection()
 
-	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
-	if botToken == "" {
-		log.Fatalf("no TELEGRAM_BOT_TOKEN provided in environment variables")
-	}
-	log.Println("botToken: " + botToken)
-
-	bot, err := tgbotapi.NewBotAPI(botToken)
+	err = dbManager.InitDatabase()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error initializing database: %v", err)
+
+	} else {
+		log.Println("Irregular verbs data inserted successfully.")
+		log.Println("Database initialization completed successfully.")
 	}
 
-	bot.Debug = true
-
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-
-	webhookURL := os.Getenv("TELEGRAM_WEBHOOK_URL")
-	if webhookURL == "" {
-		log.Fatalf("no WEBHOOK_URL provided in environment variables")
-	}
-
-	log.Println("webhookURL: " + webhookURL)
-
-	wh, _ := tgbotapi.NewWebhook(webhookURL)
-
-	_, err = bot.Request(wh)
+	bot, err := botManager.CreateTelegramBot()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error creating a new BotAPI instance: %v", err)
+	} else {
+		log.Println("A new BotAPI instance was created successfully.")
+		log.Printf("Authorized on account %s", bot.Self.UserName)
+		bot.Debug = true
 	}
 
-	info, err := bot.GetWebhookInfo()
+	err = botManager.CreateTelegramWebhook(err, bot)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error creating a new Telegram Bot Webhook: %v", err)
+	} else {
+		log.Println("Telegram Bot Webhook was created successfully.")
 	}
 
-	if info.LastErrorDate != 0 {
-		log.Fatalf("Telegram callback failed: %s", info.LastErrorMessage)
+	tgBotUpdates := bot.ListenForWebhook("/" + bot.Token)
+	go startHTTPServer()
+
+	for tgBotUpdate := range tgBotUpdates {
+		if tgBotUpdate.Message != nil {
+			handler.HandleMessageFromUser(bot, tgBotUpdate)
+		} else if tgBotUpdate.CallbackQuery != nil {
+			handler.HandleCallbackQuery(bot, tgBotUpdate)
+		}
 	}
-
-	updates := bot.ListenForWebhook("/" + bot.Token)
-
+}
+func startHTTPServer() {
 	appPort := os.Getenv("APP_PORT")
 	if appPort == "" {
-		log.Fatalf("no APP_PORT provided in environment variables")
+		log.Fatalf("No APP_PORT provided in environment variables")
 	}
-
 	log.Printf("Starting HTTP server on port %s", appPort)
-
-	go func() {
-		err := http.ListenAndServe("0.0.0.0:"+appPort, nil)
-		if err != nil {
-			log.Fatalf("failed to start HTTP server: %v", err)
-		}
-	}()
-
-	log.Printf("Server running on :%s...\n", appPort)
-
-	for update := range updates {
-		if update.Message != nil {
-			handler.HandleMessageFromUser(bot, update)
-		} else if update.CallbackQuery != nil {
-			handler.HandleCallbackQuery(bot, update)
-		}
+	if err := http.ListenAndServe("0.0.0.0:8083", nil); err != nil {
+		log.Fatalf("Error starting HTTP server: %v", err)
 	}
 }
