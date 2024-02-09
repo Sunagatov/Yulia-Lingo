@@ -35,7 +35,7 @@ func main() {
 		bot.Debug = true
 	}
 
-	err = botManager.CreateTelegramWebhook(err, bot)
+	err = botManager.CreateTelegramWebhook(bot)
 	if err != nil {
 		log.Fatalf("Error creating a new Telegram Bot Webhook: %v", err)
 	} else {
