@@ -4,6 +4,7 @@ import (
 	dbManager "Yulia-Lingo/internal/db"
 	botManager "Yulia-Lingo/internal/telegram/bot_manager"
 	"Yulia-Lingo/internal/telegram/handler"
+	"Yulia-Lingo/internal/verb/db"
 	_ "github.com/lib/pq"
 	"log"
 	"net/http"
@@ -17,7 +18,7 @@ func main() {
 	}
 	defer dbManager.CloseDatabaseConnection()
 
-	err = dbManager.InitDatabase()
+	err = db.InitIrregularVerbsTable()
 	if err != nil {
 		log.Fatalf("Error initializing database: %v", err)
 

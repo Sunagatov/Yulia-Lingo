@@ -2,6 +2,7 @@ package button
 
 import (
 	database "Yulia-Lingo/internal/db"
+	"Yulia-Lingo/internal/verb/model"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
@@ -13,14 +14,6 @@ import (
 const (
 	IrregularVerbsPerPage = 10
 )
-
-type IrregularVerb struct {
-	ID        int    `json:"id"`
-	Original  string `json:"original"`
-	Translate string `json:"translate"`
-	Past      string `json:"past"`
-	PastP     string `json:"past_participle"`
-}
 
 var userContext = make(map[int64]int)
 
@@ -57,7 +50,7 @@ func HandleIrregularVerbsListButtonClic2k(bot *tgbotapi.BotAPI, chatID int64) {
 
 	var messageText string
 	for _, verb := range verbs {
-		messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Translate, verb.Past, verb.PastP)
+		messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Verb, verb.Past, verb.PastP)
 	}
 
 	messageToUser := tgbotapi.NewMessage(chatID, messageText)
@@ -83,24 +76,24 @@ func getTotalIrregularVerbsCount() (int, error) {
 	return count, err
 }
 
-func getIrregularVerbs(offset, limit int) ([]IrregularVerb, error) {
+func getIrregularVerbs(offset, limit int) ([]model.IrregularVerb, error) {
 	db, err := database.GetPostgresClient()
 	if err != nil {
 		return nil, fmt.Errorf("can't connect to postgres, err: %v", err)
 	}
 
-	query := "SELECT id, translated, original, past, past_participle FROM irregular_verbs ORDER BY id LIMIT $1 OFFSET $2"
+	query := "SELECT id, translated, verb, past, past_participle FROM irregular_verbs LIMIT $1 OFFSET $2"
 	rows, err := db.Query(query, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("error executing database query: %v", err)
 	}
 	defer rows.Close()
 
-	var verbs []IrregularVerb
+	var verbs []model.IrregularVerb
 
 	for rows.Next() {
-		var verb IrregularVerb
-		err := rows.Scan(&verb.ID, &verb.Translate, &verb.Original, &verb.Past, &verb.PastP)
+		var verb model.IrregularVerb
+		err := rows.Scan(&verb.ID, &verb.Verb, &verb.Original, &verb.Past, &verb.PastP)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %v", err)
 		}
