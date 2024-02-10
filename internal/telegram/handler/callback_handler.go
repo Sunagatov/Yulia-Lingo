@@ -95,8 +95,8 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 			log.Printf("Error sending response message: %v", errorMessage)
 		}
 
-	case strings.HasPrefix(callbackQuery.Data, button.LetterSelectionPrefix):
-		selectedLetter := strings.TrimPrefix(callbackData, button.LetterSelectionPrefix)
+	case strings.HasPrefix(callbackQuery.Data, "select_letter_"):
+		selectedLetter := strings.TrimPrefix(callbackData, "select_letter_")
 		responseText := "Вы выбрали букву " + selectedLetter
 		callbackMessage := tgbotapi.NewEditMessageText(callbackChatID, callbackMessageID, responseText)
 		_, err := bot.Send(callbackMessage)
