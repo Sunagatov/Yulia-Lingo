@@ -57,10 +57,6 @@ func InitDatabase() error {
 			return fmt.Errorf("database initialization failed: %v", err)
 		}
 	}
-
-	log.Println("Irregular verbs data inserted successfully.")
-
-	log.Println("Database initialization completed successfully.")
 	return nil
 }
 

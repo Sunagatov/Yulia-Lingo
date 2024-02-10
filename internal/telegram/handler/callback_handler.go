@@ -95,6 +95,15 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 			log.Printf("Error sending response message: %v", errorMessage)
 		}
 
+	case strings.HasPrefix(callbackQuery.Data, button.LetterSelectionPrefix):
+		selectedLetter := strings.TrimPrefix(callbackData, button.LetterSelectionPrefix)
+		responseText := "Вы выбрали букву " + selectedLetter
+		callbackMessage := tgbotapi.NewEditMessageText(callbackChatID, callbackMessageID, responseText)
+		_, err := bot.Send(callbackMessage)
+		if err != nil {
+			log.Printf("Error with edit message, err: %v", err)
+		}
+
 	default:
 		responseText := "Эта функция пока что в работе и не поддерживается"
 		callbackMessage := tgbotapi.NewEditMessageText(callbackChatID, callbackMessageID, responseText)
