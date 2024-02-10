@@ -5,6 +5,8 @@ import (
 	"Yulia-Lingo/internal/verb/model"
 	"fmt"
 	"github.com/tealeg/xlsx"
+	"log"
+	"os"
 	"strings"
 )
 
@@ -25,6 +27,8 @@ func SaveIrregularVerbs() error {
 
 func prepareRequestToDB() (string, error) {
 	verbs, err := readXlsxFile()
+
+	log.Printf("Irregular verbs from xlsx file: %s\n", verbs)
 	if err != nil {
 		return "", fmt.Errorf("can't get clise of verbs, err: %v", err)
 	}
@@ -47,7 +51,12 @@ func prepareRequestToDB() (string, error) {
 func readXlsxFile() ([]model.IrregularVerb, error) {
 	var irregularVerbs []model.IrregularVerb
 
-	excelFile, err := xlsx.OpenFile("resource/nepravilnye-glagoly-295.xlsx")
+	irregularVerbsFilePath := os.Getenv("IRREGULAR_VERBS_FILE_PATH")
+	if irregularVerbsFilePath == "" {
+		log.Fatalf("no IRREGULAR_VERBS_FILE_PATH provided in environment variables")
+	}
+
+	excelFile, err := xlsx.OpenFile(irregularVerbsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("can't open xlsx file, err: %v", err)
 	}

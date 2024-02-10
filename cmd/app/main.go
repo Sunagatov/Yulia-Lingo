@@ -3,6 +3,7 @@ package main
 import (
 	database "Yulia-Lingo/internal/db"
 	"Yulia-Lingo/internal/telegram/handler"
+	verb_database "Yulia-Lingo/internal/verb/db"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
@@ -15,7 +16,7 @@ func main() {
 	database.CreateDatabaseConnection()
 	defer database.CloseDatabaseConnection()
 
-	err := database.InitDatabase()
+	err := verb_database.InitIrregularVerbsTable()
 	if err != nil {
 		log.Fatalf("Error database init: %v", err)
 	}

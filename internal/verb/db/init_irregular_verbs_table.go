@@ -35,13 +35,9 @@ func InitIrregularVerbsTable() error {
 	}
 	log.Println("Table created successfully.")
 
-	runSaveDataFromFiles()
-	return nil
-}
-
-func runSaveDataFromFiles() {
-	err := SaveIrregularVerbs()
+	err = SaveIrregularVerbs()
 	if err != nil {
 		log.Printf("Can't insert irregular verbs data, err: %v", err)
 	}
+	return nil
 }

@@ -25,7 +25,7 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 			_, errorMessage := bot.Send(&msg)
 
 			if errorMessage != nil {
-				log.Printf("Error sending response message: %v", errorMessage)
+				log.Printf("Error sending response message for /start: %v", errorMessage)
 			}
 
 		}
@@ -33,7 +33,7 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 		{
 			keyboard := CreateLetterKeyboardMarkup()
 
-			messageText := "С какой буквы вы хотите начать изучение неправильных глаголов?"
+			messageText := "С какой буквы вы хотите начать изучение неправильных глаголов?\n------------------------\n"
 
 			message := tgbotapi.NewMessage(chatID, messageText)
 			message.ReplyMarkup = keyboard

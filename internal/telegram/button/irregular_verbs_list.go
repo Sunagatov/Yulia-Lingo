@@ -35,7 +35,7 @@ func GetIrregularVerbs(offset, limit int) ([]model.IrregularVerb, error) {
 		return nil, fmt.Errorf("can't connect to postgres, err: %v", err)
 	}
 
-	query := "SELECT id, translated, verb, past, past_participle FROM irregular_verbs LIMIT $1 OFFSET $2"
+	query := "SELECT id, original, verb, past, past_participle FROM irregular_verbs LIMIT $1 OFFSET $2"
 	rows, err := db.Query(query, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("error executing database query: %v", err)
@@ -46,7 +46,7 @@ func GetIrregularVerbs(offset, limit int) ([]model.IrregularVerb, error) {
 
 	for rows.Next() {
 		var verb model.IrregularVerb
-		err := rows.Scan(&verb.ID, &verb.Verb, &verb.Original, &verb.Past, &verb.PastP)
+		err := rows.Scan(&verb.ID, &verb.Original, &verb.Verb, &verb.Past, &verb.PastP)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %v", err)
 		}
@@ -61,14 +61,14 @@ func GetIrregularVerbs(offset, limit int) ([]model.IrregularVerb, error) {
 }
 
 func CreateInlineKeyboard(currentPage, totalPages int) tgbotapi.InlineKeyboardMarkup {
-	var rows []tgbotapi.InlineKeyboardButton
+	var keyboard []tgbotapi.InlineKeyboardButton
 	if currentPage > 1 {
-		rows = append(rows, tgbotapi.NewInlineKeyboardButtonData("Prev page", GetPaginationCallbackData(currentPage-1)))
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Prev page", GetPaginationCallbackData(currentPage-1)))
 	}
 	if currentPage < totalPages {
-		rows = append(rows, tgbotapi.NewInlineKeyboardButtonData("Next page", GetPaginationCallbackData(currentPage+1)))
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Next page", GetPaginationCallbackData(currentPage+1)))
 	}
-	return tgbotapi.NewInlineKeyboardMarkup(rows)
+	return tgbotapi.NewInlineKeyboardMarkup(keyboard)
 }
 
 func GetPaginationCallbackData(pageNumber int) string {

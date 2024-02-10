@@ -20,13 +20,11 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 	switch {
 	case strings.HasPrefix(callbackQuery.Data, "select_letter_"):
 		selectedLetter := strings.TrimPrefix(callbackData, "select_letter_")
-		responseText := fmt.Sprintf("Список неправильных глаголов на букву '%s':\n", selectedLetter)
+		responseText := fmt.Sprintf("Список неправильных глаголов на букву '%s':\n\n", selectedLetter)
 
 		pageNumber := 1
-
 		button.UpdateCurrentPage(callbackChatID, pageNumber)
 		currentPage := button.GetCurrentPage(callbackChatID)
-
 		totalVerbs, err := button.GetTotalIrregularVerbsCount()
 		if err != nil {
 			log.Printf("Error getting total irregular verbs count: %v", err)
@@ -43,10 +41,14 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 
 		var messageText string
 		for _, verb := range verbs {
-			messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Translate, verb.Past, verb.PastP)
+			messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Verb, verb.Past, verb.PastP)
 		}
 
 		responseText = responseText + messageText
+
+		log.Printf("pageNumber: %s,\n\n currentPage: %s,\n\n totalVerbs: %s,\n\n totalPages: %s,\n\n offset: %s,\n\n verbs: %s,\n\n responseText: %s\n\n",
+			pageNumber, currentPage, totalVerbs, totalPages, offset, verbs, responseText)
+
 		messageToUser := tgbotapi.NewMessage(callbackChatID, responseText)
 		messageToUser.ReplyMarkup = button.CreateInlineKeyboard(currentPage, totalPages)
 
@@ -84,7 +86,7 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 
 		var messageText string
 		for _, verb := range verbs {
-			messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Translate, verb.Past, verb.PastP)
+			messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Verb, verb.Past, verb.PastP)
 		}
 
 		messageToUser := tgbotapi.NewMessage(callbackChatID, messageText)
@@ -93,15 +95,6 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 		_, errorMessage := bot.Send(&messageToUser)
 		if errorMessage != nil {
 			log.Printf("Error sending response message: %v", errorMessage)
-		}
-
-	case strings.HasPrefix(callbackQuery.Data, "select_letter_"):
-		selectedLetter := strings.TrimPrefix(callbackData, "select_letter_")
-		responseText := "Вы выбрали букву " + selectedLetter
-		callbackMessage := tgbotapi.NewEditMessageText(callbackChatID, callbackMessageID, responseText)
-		_, err := bot.Send(callbackMessage)
-		if err != nil {
-			log.Printf("Error with edit message, err: %v", err)
 		}
 
 	default:
