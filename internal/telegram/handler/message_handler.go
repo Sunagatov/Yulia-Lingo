@@ -4,7 +4,6 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
-	"os"
 )
 
 func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
@@ -15,8 +14,9 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 	switch textFromUser {
 	case "/start":
 		{
-			userName := os.Getenv("TG_BOT_NAME")
-			greetingMessageToUser := "Привет, %s!\nЭто телеграм бот - Yulia-lingo.\nОн поможет тебе пополнить твой словарный запас по английскому языку."
+			userName := botUpdate.Message.From.UserName
+
+			greetingMessageToUser := "Здравствуйте, %s!\n\nЭто телеграм бот - Yulia-lingo.\n\nБот поможет тебе пополнить словарный запас английского языка.\n\nСейчас доступен:\n- Список неправильных глаголов."
 			text := fmt.Sprintf(greetingMessageToUser, userName)
 			msg := tgbotapi.NewMessage(chatID, text)
 			msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(

@@ -29,14 +29,14 @@ func GetTotalIrregularVerbsCount() (int, error) {
 	return count, err
 }
 
-func GetIrregularVerbs(offset, limit int) ([]model.IrregularVerb, error) {
+func GetIrregularVerbs(offset, limit int, letter string) ([]model.IrregularVerb, error) {
 	db, err := database.GetPostgresClient()
 	if err != nil {
 		return nil, fmt.Errorf("can't connect to postgres, err: %v", err)
 	}
 
-	query := "SELECT id, original, verb, past, past_participle FROM irregular_verbs LIMIT $1 OFFSET $2"
-	rows, err := db.Query(query, limit, offset)
+	query := "SELECT id, original, verb, past, past_participle FROM irregular_verbs WHERE verb LIKE $3 || '%' LIMIT $1 OFFSET $2"
+	rows, err := db.Query(query, limit, offset, strings.ToLower(letter))
 	if err != nil {
 		return nil, fmt.Errorf("error executing database query: %v", err)
 	}
@@ -60,19 +60,19 @@ func GetIrregularVerbs(offset, limit int) ([]model.IrregularVerb, error) {
 	return verbs, nil
 }
 
-func CreateInlineKeyboard(currentPage, totalPages int) tgbotapi.InlineKeyboardMarkup {
+func CreateInlineKeyboard(currentPage, totalPages int, selectedLetter string) tgbotapi.InlineKeyboardMarkup {
 	var keyboard []tgbotapi.InlineKeyboardButton
 	if currentPage > 1 {
-		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Prev page", GetPaginationCallbackData(currentPage-1)))
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Prev page", GetPaginationCallbackData(currentPage-1, selectedLetter)))
 	}
 	if currentPage < totalPages {
-		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Next page", GetPaginationCallbackData(currentPage+1)))
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Next page", GetPaginationCallbackData(currentPage+1, selectedLetter)))
 	}
 	return tgbotapi.NewInlineKeyboardMarkup(keyboard)
 }
 
-func GetPaginationCallbackData(pageNumber int) string {
-	return "irregular_verbs_page_" + strconv.Itoa(pageNumber)
+func GetPaginationCallbackData(pageNumber int, selectedLetter string) string {
+	return "irregular_verbs_page_" + strconv.Itoa(pageNumber) + "_" + selectedLetter
 }
 
 func GetCurrentPage(chatID int64) int {
@@ -82,13 +82,14 @@ func GetCurrentPage(chatID int64) int {
 	return 1
 }
 
-func ExtractPageNumber(callbackData string) int {
+func ExtractPageNumber(callbackData string) (int, string) {
 	parts := strings.Split(callbackData, "_")
-	if len(parts) == 4 && parts[0] == "irregular" && parts[1] == "verbs" && parts[2] == "page" {
+	if len(parts) == 5 && parts[0] == "irregular" && parts[1] == "verbs" && parts[2] == "page" {
 		pageNumber, _ := strconv.Atoi(parts[3])
-		return pageNumber
+		letter := parts[4]
+		return pageNumber, letter
 	}
-	return 0
+	return 0, ""
 }
 
 func UpdateCurrentPage(chatID int64, pageNumber int) {
