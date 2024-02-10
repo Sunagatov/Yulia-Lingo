@@ -3,6 +3,7 @@ package main
 import (
 	database "Yulia-Lingo/internal/db"
 	"Yulia-Lingo/internal/telegram/handler"
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
 	"log"
@@ -36,7 +37,7 @@ func main() {
 
 	webhookURL := os.Getenv("TELEGRAM_WEBHOOK_URL")
 	if webhookURL == "" {
-		log.Fatalf("no WEBHOOK_URL provided in environment variables")
+		fmt.Errorf("no WEBHOOK_URL provided in environment variables")
 	}
 
 	log.Println("webhookURL: " + webhookURL)
@@ -54,26 +55,11 @@ func main() {
 	}
 
 	if info.LastErrorDate != 0 {
-		log.Fatalf("Telegram callback failed: %s", info.LastErrorMessage)
+		log.Printf("Telegram callback failed: %s", info.LastErrorMessage)
 	}
 
 	updates := bot.ListenForWebhook("/" + bot.Token)
-
-	appPort := os.Getenv("APP_PORT")
-	if appPort == "" {
-		log.Fatalf("no APP_PORT provided in environment variables")
-	}
-
-	log.Printf("Starting HTTP server on port %s", appPort)
-
-	go func() {
-		err := http.ListenAndServe("0.0.0.0:"+appPort, nil)
-		if err != nil {
-			log.Fatalf("failed to start HTTP server: %v", err)
-		}
-	}()
-
-	log.Printf("Server running on :%s...\n", appPort)
+	go http.ListenAndServe("0.0.0.0:8083", nil)
 
 	for update := range updates {
 		if update.Message != nil {

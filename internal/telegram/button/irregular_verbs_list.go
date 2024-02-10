@@ -4,8 +4,6 @@ import (
 	database "Yulia-Lingo/internal/db"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"log"
-	"math"
 	"strconv"
 	"strings"
 )
@@ -24,38 +22,7 @@ type IrregularVerb struct {
 
 var userContext = make(map[int64]int)
 
-func HandleIrregularVerbsListButtonClick(bot *tgbotapi.BotAPI, chatID int64) {
-	currentPage := getCurrentPage(chatID)
-
-	totalVerbs, err := getTotalIrregularVerbsCount()
-	if err != nil {
-		log.Printf("Error getting total irregular verbs count: %v", err)
-		return
-	}
-	totalPages := int(math.Ceil(float64(totalVerbs) / IrregularVerbsPerPage))
-
-	offset := (currentPage - 1) * IrregularVerbsPerPage
-	verbs, err := getIrregularVerbs(offset, IrregularVerbsPerPage)
-	if err != nil {
-		log.Printf("Error getting irregular verbs: %v", err)
-		return
-	}
-
-	var messageText string
-	for _, verb := range verbs {
-		messageText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Translate, verb.Past, verb.PastP)
-	}
-
-	messageToUser := tgbotapi.NewMessage(chatID, messageText)
-	messageToUser.ReplyMarkup = createInlineKeyboard(currentPage, totalPages)
-
-	_, errorMessage := bot.Send(&messageToUser)
-	if errorMessage != nil {
-		log.Printf("Error sending response message: %v", errorMessage)
-	}
-}
-
-func getTotalIrregularVerbsCount() (int, error) {
+func GetTotalIrregularVerbsCount() (int, error) {
 	db, err := database.GetPostgresClient()
 	if err != nil {
 		return 0, fmt.Errorf("can't connect to postgres, err: %v", err)
@@ -69,7 +36,7 @@ func getTotalIrregularVerbsCount() (int, error) {
 	return count, err
 }
 
-func getIrregularVerbs(offset, limit int) ([]IrregularVerb, error) {
+func GetIrregularVerbs(offset, limit int) ([]IrregularVerb, error) {
 	db, err := database.GetPostgresClient()
 	if err != nil {
 		return nil, fmt.Errorf("can't connect to postgres, err: %v", err)
@@ -100,22 +67,22 @@ func getIrregularVerbs(offset, limit int) ([]IrregularVerb, error) {
 	return verbs, nil
 }
 
-func createInlineKeyboard(currentPage, totalPages int) tgbotapi.InlineKeyboardMarkup {
+func CreateInlineKeyboard(currentPage, totalPages int) tgbotapi.InlineKeyboardMarkup {
 	var rows []tgbotapi.InlineKeyboardButton
 	if currentPage > 1 {
-		rows = append(rows, tgbotapi.NewInlineKeyboardButtonData("Prev page", getPaginationCallbackData(currentPage-1)))
+		rows = append(rows, tgbotapi.NewInlineKeyboardButtonData("Prev page", GetPaginationCallbackData(currentPage-1)))
 	}
 	if currentPage < totalPages {
-		rows = append(rows, tgbotapi.NewInlineKeyboardButtonData("Next page", getPaginationCallbackData(currentPage+1)))
+		rows = append(rows, tgbotapi.NewInlineKeyboardButtonData("Next page", GetPaginationCallbackData(currentPage+1)))
 	}
 	return tgbotapi.NewInlineKeyboardMarkup(rows)
 }
 
-func getPaginationCallbackData(pageNumber int) string {
+func GetPaginationCallbackData(pageNumber int) string {
 	return "irregular_verbs_page_" + strconv.Itoa(pageNumber)
 }
 
-func getCurrentPage(chatID int64) int {
+func GetCurrentPage(chatID int64) int {
 	if page, ok := userContext[chatID]; ok {
 		return page
 	}
