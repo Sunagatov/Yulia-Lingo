@@ -38,7 +38,7 @@ func prepareRequestToDB() (string, error) {
 			"'"+verb.Original+"'",
 			"'"+verb.Verb+"'",
 			"'"+verb.Past+"'",
-			"'"+verb.PastP+"'")
+			"'"+verb.PastParticiple+"'")
 
 		sb.WriteString(query)
 		sb.WriteString(args)
@@ -73,10 +73,10 @@ func readXlsxFile() ([]model.IrregularVerb, error) {
 		}
 
 		irregularVerb := model.IrregularVerb{
-			Verb:     row.Cells[1].String(),
-			Past:     row.Cells[2].String(),
-			PastP:    row.Cells[3].String(),
-			Original: row.Cells[4].String(),
+			Verb:           row.Cells[1].String(),
+			Past:           row.Cells[2].String(),
+			PastParticiple: row.Cells[3].String(),
+			Original:       row.Cells[4].String(),
 		}
 
 		irregularVerbs = append(irregularVerbs, irregularVerb)

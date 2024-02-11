@@ -53,7 +53,7 @@ func GetIrregularVerbs(offset, limit int, letter string) ([]model.IrregularVerb,
 
 	for rows.Next() {
 		var verb model.IrregularVerb
-		err := rows.Scan(&verb.ID, &verb.Original, &verb.Verb, &verb.Past, &verb.PastP)
+		err := rows.Scan(&verb.ID, &verb.Original, &verb.Verb, &verb.Past, &verb.PastParticiple)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %v", err)
 		}
@@ -82,11 +82,13 @@ func GetPaginationCallbackData(pageNumber int, selectedLetter string) string {
 	return "irregular_verbs_page_" + strconv.Itoa(pageNumber) + "_" + selectedLetter
 }
 
-func GetCurrentPage(chatID int64) int {
-	if page, ok := userContext[chatID]; ok {
-		return page
+func GetCurrentPageNumber(chatID int64) (int, error) {
+	pageNumber, ok := userContext[chatID]
+	if ok {
+		return pageNumber, nil
+	} else {
+		return -1, fmt.Errorf("error retrieving current irregular verbs page for a user")
 	}
-	return 1
 }
 
 func ExtractPageNumber(callbackData string) (int, string) {
