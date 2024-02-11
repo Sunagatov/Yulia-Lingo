@@ -1,8 +1,8 @@
-package button
+package irregular_verbs
 
 import (
 	database "Yulia-Lingo/internal/database"
-	"Yulia-Lingo/internal/verb/model"
+	"Yulia-Lingo/internal/database/irregular_verbs/model"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"math"

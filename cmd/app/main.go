@@ -2,6 +2,7 @@ package main
 
 import (
 	dbmanager "Yulia-Lingo/internal/database"
+	irregularVerbsManager "Yulia-Lingo/internal/database/irregular_verbs"
 	"Yulia-Lingo/internal/telegram/bot_manager"
 	"Yulia-Lingo/internal/telegram/handler"
 	_ "github.com/lib/pq"
@@ -18,7 +19,7 @@ func main() {
 	}
 	defer dbmanager.CloseDatabaseConnection()
 
-	err = dbmanager.InitIrregularVerbsTable()
+	err = irregularVerbsManager.InitIrregularVerbsTable()
 	if err != nil {
 		log.Fatalf("Failed to initialize irregular verbs table: %v", err)
 	}

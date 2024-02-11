@@ -1,13 +1,13 @@
 package handler
 
 import (
-	"Yulia-Lingo/internal/telegram/button"
+	irregularVerbsManager "Yulia-Lingo/internal/database/irregular_verbs"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	tgBotApi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"strings"
 )
 
-func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) error {
+func HandleCallbackQuery(bot *tgBotApi.BotAPI, botUpdate tgBotApi.Update) error {
 	callbackQuery := botUpdate.CallbackQuery
 	callbackMessageFromUser := callbackQuery.Data
 
@@ -21,49 +21,49 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) error 
 	}
 }
 
-func handleIrregularVerbsPaginationButtonsCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) error {
+func handleIrregularVerbsPaginationButtonsCallback(bot *tgBotApi.BotAPI, callbackQuery *tgBotApi.CallbackQuery) error {
 	callbackChatID := callbackQuery.Message.Chat.ID
 	callbackMessageID := callbackQuery.Message.MessageID
 	callbackMessageText := callbackQuery.Message.Text
 	callbackMessageFromUser := callbackQuery.Data
 
-	pageNumber, selectedLetter := button.ExtractPageNumber(callbackMessageFromUser)
+	pageNumber, selectedLetter := irregularVerbsManager.ExtractPageNumber(callbackMessageFromUser)
 
-	button.UpdateCurrentPage(callbackChatID, pageNumber)
+	irregularVerbsManager.UpdateCurrentPage(callbackChatID, pageNumber)
 
-	msg := tgbotapi.NewEditMessageText(callbackChatID, callbackMessageID, callbackMessageText)
+	msg := tgBotApi.NewEditMessageText(callbackChatID, callbackMessageID, callbackMessageText)
 	_, err := bot.Send(&msg)
 	if err != nil {
 		return fmt.Errorf("failed to send the message to a user: %v", err)
 	}
 
-	totalVerbs, err := button.GetTotalIrregularVerbsCount(selectedLetter)
+	totalVerbs, err := irregularVerbsManager.GetTotalIrregularVerbsCount(selectedLetter)
 	if err != nil {
 		return fmt.Errorf("failed to get the total irregularVerbs count: %v", err)
 	}
 
 	if totalVerbs == 0 {
 		responseText := fmt.Sprintf("К сожалению глаголов начинающихся на латинскую букву - '%s' нет.\n\n", selectedLetter)
-		messageToUser := tgbotapi.NewMessage(callbackChatID, responseText)
+		messageToUser := tgBotApi.NewMessage(callbackChatID, responseText)
 		_, err = bot.Send(&messageToUser)
 		if err != nil {
 			return fmt.Errorf("failed to send the message to a user: %v", err)
 		}
 		return nil
 	} else {
-		currentPageNumber, err := button.GetCurrentPageNumber(callbackChatID)
+		currentPageNumber, err := irregularVerbsManager.GetCurrentPageNumber(callbackChatID)
 		if err != nil {
 			return err
 		}
 
-		irregularVerbsPageAsText, err := button.GetIrregularVerbsPageAsText(currentPageNumber, selectedLetter)
+		irregularVerbsPageAsText, err := irregularVerbsManager.GetIrregularVerbsPageAsText(currentPageNumber, selectedLetter)
 		if err != nil {
 			return fmt.Errorf("failed to get irregular irregularVerbs page as text: %v", err)
 		}
 
-		messageToUser := tgbotapi.NewMessage(callbackChatID, irregularVerbsPageAsText)
-		if totalVerbs > button.IrregularVerbsCountPerPage {
-			messageToUser.ReplyMarkup = button.CreateInlinePaginationButtonsForIrregularVerbsPage(currentPageNumber, totalVerbs, selectedLetter)
+		messageToUser := tgBotApi.NewMessage(callbackChatID, irregularVerbsPageAsText)
+		if totalVerbs > irregularVerbsManager.IrregularVerbsCountPerPage {
+			messageToUser.ReplyMarkup = irregularVerbsManager.CreateInlinePaginationButtonsForIrregularVerbsPage(currentPageNumber, totalVerbs, selectedLetter)
 		}
 
 		_, errorMessage := bot.Send(&messageToUser)
@@ -74,34 +74,34 @@ func handleIrregularVerbsPaginationButtonsCallback(bot *tgbotapi.BotAPI, callbac
 	}
 }
 
-func handleSelectLetterCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) error {
+func handleSelectLetterCallback(bot *tgBotApi.BotAPI, callbackQuery *tgBotApi.CallbackQuery) error {
 	callbackChatID := callbackQuery.Message.Chat.ID
 	callbackMessageFromUser := callbackQuery.Data
 	selectedLetter := strings.TrimPrefix(callbackMessageFromUser, "select_letter_")
 
 	pageNumber := 1
-	button.UpdateCurrentPage(callbackChatID, pageNumber)
+	irregularVerbsManager.UpdateCurrentPage(callbackChatID, pageNumber)
 
-	totalVerbs, err := button.GetTotalIrregularVerbsCount(selectedLetter)
+	totalVerbs, err := irregularVerbsManager.GetTotalIrregularVerbsCount(selectedLetter)
 	if err != nil {
 		return fmt.Errorf("failed to get total irregular irregularVerbs count: %v", err)
 	}
 
 	if totalVerbs == 0 {
 		textOfMessageToUser := fmt.Sprintf("К сожалению глаголов начинающихся на латинскую букву - '%s' нет.\n\n", selectedLetter)
-		messageToUser := tgbotapi.NewMessage(callbackChatID, textOfMessageToUser)
+		messageToUser := tgBotApi.NewMessage(callbackChatID, textOfMessageToUser)
 		_, err = bot.Send(&messageToUser)
 		if err != nil {
 			return fmt.Errorf("failed to send response message: %v", err)
 		}
 		return nil
 	} else {
-		currentPageNumber, err := button.GetCurrentPageNumber(callbackChatID)
+		currentPageNumber, err := irregularVerbsManager.GetCurrentPageNumber(callbackChatID)
 		if err != nil {
 			return err
 		}
 
-		irregularVerbsPageAsText, err := button.GetIrregularVerbsPageAsText(currentPageNumber, selectedLetter)
+		irregularVerbsPageAsText, err := irregularVerbsManager.GetIrregularVerbsPageAsText(currentPageNumber, selectedLetter)
 		if err != nil {
 			return fmt.Errorf("failed to get irregular irregularVerbs page as text: %v", err)
 		}
@@ -109,9 +109,9 @@ func handleSelectLetterCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 		titleInTextMessageToUser := fmt.Sprintf("Список неправильных глаголов начинающихся на латинскую букву - '%s':\n\n", selectedLetter)
 		textOfMessageToUser := titleInTextMessageToUser + irregularVerbsPageAsText
 
-		messageToUser := tgbotapi.NewMessage(callbackChatID, textOfMessageToUser)
-		if totalVerbs > button.IrregularVerbsCountPerPage {
-			messageToUser.ReplyMarkup = button.CreateInlinePaginationButtonsForIrregularVerbsPage(currentPageNumber, totalVerbs, selectedLetter)
+		messageToUser := tgBotApi.NewMessage(callbackChatID, textOfMessageToUser)
+		if totalVerbs > irregularVerbsManager.IrregularVerbsCountPerPage {
+			messageToUser.ReplyMarkup = irregularVerbsManager.CreateInlinePaginationButtonsForIrregularVerbsPage(currentPageNumber, totalVerbs, selectedLetter)
 		}
 		_, errorMessage := bot.Send(&messageToUser)
 		if errorMessage != nil {

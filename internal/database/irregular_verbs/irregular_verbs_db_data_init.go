@@ -1,7 +1,8 @@
-package database
+package irregular_verbs
 
 import (
-	"Yulia-Lingo/internal/verb/model"
+	"Yulia-Lingo/internal/database"
+	"Yulia-Lingo/internal/database/irregular_verbs/model"
 	"fmt"
 	"github.com/tealeg/xlsx"
 	"log"
@@ -25,7 +26,7 @@ const (
 
 func InitIrregularVerbsTable() error {
 	log.Println("Connecting to database table...")
-	db, err := GetPostgresClient()
+	db, err := database.GetPostgresClient()
 	if err != nil {
 		return fmt.Errorf("failed to connect postgres database: %v", err)
 	}
@@ -56,7 +57,7 @@ func InitIrregularVerbsTable() error {
 }
 
 func prepareIrregularVerbsSqlQueryInserts() (string, error) {
-	irregularVerbsFromFile, err := readXlsxFile()
+	irregularVerbsFromFile, err := readIrregularVerbsXlsxFile()
 	if err != nil {
 		return "", fmt.Errorf("failed to get irregular verbs from the excel file: %v", err)
 	}
@@ -77,7 +78,7 @@ func prepareIrregularVerbsSqlQueryInserts() (string, error) {
 	return sb.String(), nil
 }
 
-func readXlsxFile() ([]model.IrregularVerb, error) {
+func readIrregularVerbsXlsxFile() ([]model.IrregularVerb, error) {
 	var irregularVerbs []model.IrregularVerb
 
 	irregularVerbsFilePath := os.Getenv("IRREGULAR_VERBS_FILE_PATH")
@@ -96,20 +97,16 @@ func readXlsxFile() ([]model.IrregularVerb, error) {
 		if i == 0 {
 			continue
 		}
-
 		if len(row.Cells) == 0 {
 			break
 		}
-
 		irregularVerb := model.IrregularVerb{
 			Verb:           row.Cells[1].String(),
 			Past:           row.Cells[2].String(),
 			PastParticiple: row.Cells[3].String(),
 			Original:       row.Cells[4].String(),
 		}
-
 		irregularVerbs = append(irregularVerbs, irregularVerb)
 	}
-
 	return irregularVerbs, nil
 }
