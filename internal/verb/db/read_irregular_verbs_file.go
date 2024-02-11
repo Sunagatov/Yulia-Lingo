@@ -28,14 +28,14 @@ func SaveIrregularVerbs() error {
 func prepareRequestToDB() (string, error) {
 	verbs, err := readXlsxFile()
 
-	log.Printf("Irregular verbs from xlsx file: %s\n", verbs)
 	if err != nil {
 		return "", fmt.Errorf("can't get clise of verbs, err: %v", err)
 	}
 	var sb strings.Builder
 	query := "INSERT INTO irregular_verbs (original, verb, past, past_participle) VALUES "
 	for _, verb := range verbs {
-		args := fmt.Sprintf("(%s, %s, %s, %s)", "'"+verb.Original+"'",
+		args := fmt.Sprintf("(%s, %s, %s, %s)",
+			"'"+verb.Original+"'",
 			"'"+verb.Verb+"'",
 			"'"+verb.Past+"'",
 			"'"+verb.PastP+"'")

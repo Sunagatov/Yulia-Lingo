@@ -15,18 +15,25 @@ const (
 
 var userContext = make(map[int64]int)
 
-func GetTotalIrregularVerbsCount() (int, error) {
+func GetTotalIrregularVerbsCount(letter string) (int, error) {
 	db, err := database.GetPostgresClient()
 	if err != nil {
 		return 0, fmt.Errorf("can't connect to postgres, err: %v", err)
 	}
 
 	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM irregular_verbs").Scan(&count)
+	query := "SELECT COUNT(*) FROM irregular_verbs WHERE verb LIKE $1 || '%'"
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return 0, fmt.Errorf("error preparing statement: %v", err)
+	}
+
+	err = stmt.QueryRow(strings.ToLower(letter)).Scan(&count) // Add '%' around letter for LIKE clause
 	if err != nil {
 		return 0, fmt.Errorf("error getting total irregular verbs count: %v", err)
 	}
-	return count, err
+	defer stmt.Close() // Add this line to close the prepared statement
+	return count, nil
 }
 
 func GetIrregularVerbs(offset, limit int, letter string) ([]model.IrregularVerb, error) {
@@ -60,13 +67,13 @@ func GetIrregularVerbs(offset, limit int, letter string) ([]model.IrregularVerb,
 	return verbs, nil
 }
 
-func CreateInlineKeyboard(currentPage, totalPages int, selectedLetter string) tgbotapi.InlineKeyboardMarkup {
+func CreateInlineKeyboard(currentPage int, totalPages int, totalVerbs int, selectedLetter string) tgbotapi.InlineKeyboardMarkup {
 	var keyboard []tgbotapi.InlineKeyboardButton
 	if currentPage > 1 {
-		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Prev page", GetPaginationCallbackData(currentPage-1, selectedLetter)))
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("⬅️Назад", GetPaginationCallbackData(currentPage-1, selectedLetter)))
 	}
-	if currentPage < totalPages {
-		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Next page", GetPaginationCallbackData(currentPage+1, selectedLetter)))
+	if currentPage < totalPages && totalVerbs > IrregularVerbsPerPage {
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Вперед ➡️", GetPaginationCallbackData(currentPage+1, selectedLetter)))
 	}
 	return tgbotapi.NewInlineKeyboardMarkup(keyboard)
 }

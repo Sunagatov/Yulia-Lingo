@@ -64,9 +64,15 @@ func main() {
 
 	for update := range updates {
 		if update.Message != nil {
-			handler.HandleMessageFromUser(bot, update)
+			err = handler.HandleMessageFromUser(bot, update)
+			if err != nil {
+				log.Fatalf("Error handling message from a user: %v", err)
+			}
 		} else if update.CallbackQuery != nil {
-			handler.HandleCallbackQuery(bot, update)
+			err = handler.HandleCallbackQuery(bot, update)
+			if err != nil {
+				log.Fatalf("Error handling callback from a user: %v", err)
+			}
 		}
 	}
 }

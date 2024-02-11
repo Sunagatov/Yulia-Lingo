@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
+func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) error {
 	callbackQuery := botUpdate.CallbackQuery
 
 	callbackChatID := callbackQuery.Message.Chat.ID
@@ -20,23 +20,33 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 	switch {
 	case strings.HasPrefix(callbackQuery.Data, "select_letter_"):
 		selectedLetter := strings.TrimPrefix(callbackData, "select_letter_")
-		responseText := fmt.Sprintf("Список неправильных глаголов на букву '%s':\n\n", selectedLetter)
+		responseText := fmt.Sprintf("Список неправильных глаголов начинающихся на латинскую букву - '%s':\n\n", selectedLetter)
 
 		pageNumber := 1
 		button.UpdateCurrentPage(callbackChatID, pageNumber)
 		currentPage := button.GetCurrentPage(callbackChatID)
-		totalVerbs, err := button.GetTotalIrregularVerbsCount()
+		totalVerbs, err := button.GetTotalIrregularVerbsCount(selectedLetter)
 		if err != nil {
-			log.Printf("Error getting total irregular verbs count: %v", err)
-			return
+			return fmt.Errorf("error getting total irregular verbs count: %v", err)
+		} else {
+			log.Printf("Total irregular verbs count: %v", totalVerbs)
 		}
+
+		if totalVerbs == 0 {
+			responseText = fmt.Sprintf("К сожалению глаголов начинающихся на латинскую букву - '%s' нет.\n\n", selectedLetter)
+			messageToUser := tgbotapi.NewMessage(callbackChatID, responseText)
+			_, errorMessage := bot.Send(&messageToUser)
+			if errorMessage != nil {
+				return fmt.Errorf("error sending response message: %v", errorMessage)
+			}
+		}
+
 		totalPages := int(math.Ceil(float64(totalVerbs) / button.IrregularVerbsPerPage))
 
 		offset := (currentPage - 1) * button.IrregularVerbsPerPage
 		verbs, err := button.GetIrregularVerbs(offset, button.IrregularVerbsPerPage, selectedLetter)
 		if err != nil {
-			log.Printf("Error getting irregular verbs: %v", err)
-			return
+			return fmt.Errorf("error getting irregular verbs: %v", err)
 		}
 
 		var messageText string
@@ -50,14 +60,18 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 			pageNumber, currentPage, totalVerbs, totalPages, offset, verbs, responseText)
 
 		messageToUser := tgbotapi.NewMessage(callbackChatID, responseText)
-		messageToUser.ReplyMarkup = button.CreateInlineKeyboard(currentPage, totalPages, selectedLetter)
-
+		if totalVerbs > button.IrregularVerbsPerPage {
+			messageToUser.ReplyMarkup = button.CreateInlineKeyboard(currentPage, totalPages, totalVerbs, selectedLetter)
+		}
 		_, errorMessage := bot.Send(&messageToUser)
 		if errorMessage != nil {
-			log.Printf("Error sending response message: %v", errorMessage)
+			return fmt.Errorf("error sending response message: %v", errorMessage)
 		}
 
 	case strings.HasPrefix(callbackQuery.Data, "irregular_verbs_page_"):
+		selectedLetter := strings.TrimPrefix(callbackData, "select_letter_")
+		responseText := fmt.Sprintf("Список неправильных глаголов начинающихся на латинскую букву - '%s':\n\n", selectedLetter)
+
 		pageNumber, letter := button.ExtractPageNumber(callbackData)
 
 		button.UpdateCurrentPage(callbackChatID, pageNumber)
@@ -70,18 +84,28 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 
 		currentPage := button.GetCurrentPage(callbackChatID)
 
-		totalVerbs, err := button.GetTotalIrregularVerbsCount()
+		totalVerbs, err := button.GetTotalIrregularVerbsCount(letter)
 		if err != nil {
-			log.Printf("Error getting total irregular verbs count: %v", err)
-			return
+			return fmt.Errorf("Error getting total irregular verbs count: %v", err)
+		} else {
+			log.Printf("Total irregular verbs count: %v", totalVerbs)
 		}
+
+		if totalVerbs == 0 {
+			responseText = fmt.Sprintf("К сожалению глаголов начинающихся на латинскую букву - '%s' нет.\n\n", selectedLetter)
+			messageToUser := tgbotapi.NewMessage(callbackChatID, responseText)
+			_, errorMessage := bot.Send(&messageToUser)
+			if errorMessage != nil {
+				return fmt.Errorf("error sending response message: %v", errorMessage)
+			}
+		}
+
 		totalPages := int(math.Ceil(float64(totalVerbs) / button.IrregularVerbsPerPage))
 
 		offset := (currentPage - 1) * button.IrregularVerbsPerPage
 		verbs, err := button.GetIrregularVerbs(offset, button.IrregularVerbsPerPage, letter)
 		if err != nil {
-			log.Printf("Error getting irregular verbs: %v", err)
-			return
+			return fmt.Errorf("error getting irregular verbs: %v", err)
 		}
 
 		var messageText string
@@ -90,11 +114,13 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 		}
 
 		messageToUser := tgbotapi.NewMessage(callbackChatID, messageText)
-		messageToUser.ReplyMarkup = button.CreateInlineKeyboard(currentPage, totalPages, letter)
+		if totalVerbs > button.IrregularVerbsPerPage {
+			messageToUser.ReplyMarkup = button.CreateInlineKeyboard(currentPage, totalPages, totalVerbs, letter)
+		}
 
 		_, errorMessage := bot.Send(&messageToUser)
 		if errorMessage != nil {
-			log.Printf("Error sending response message: %v", errorMessage)
+			return fmt.Errorf("error sending response message: %v", errorMessage)
 		}
 
 	default:
@@ -102,7 +128,8 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 		callbackMessage := tgbotapi.NewEditMessageText(callbackChatID, callbackMessageID, responseText)
 		_, err := bot.Send(callbackMessage)
 		if err != nil {
-			log.Printf("Error with edit message, err: %v", err)
+			return fmt.Errorf("error with edit message, err: %v", err)
 		}
 	}
+	return nil
 }
