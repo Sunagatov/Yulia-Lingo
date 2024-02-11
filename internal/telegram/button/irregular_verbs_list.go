@@ -1,7 +1,7 @@
 package button
 
 import (
-	database "Yulia-Lingo/internal/db"
+	database "Yulia-Lingo/internal/database"
 	"Yulia-Lingo/internal/verb/model"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -19,19 +19,19 @@ var userContext = make(map[int64]int)
 func GetTotalIrregularVerbsCount(letter string) (int, error) {
 	db, err := database.GetPostgresClient()
 	if err != nil {
-		return -1, fmt.Errorf("error connecting to postgres database: %v", err)
+		return -1, fmt.Errorf("failed to connect to the postgres database: %v", err)
 	}
 
 	sqlQuery := "SELECT COUNT(*) FROM irregular_verbs WHERE verb LIKE $1 || '%'"
 	preparedSqlStatement, err := db.Prepare(sqlQuery)
 	if err != nil {
-		return -1, fmt.Errorf("error preparing sql statement: %v", err)
+		return -1, fmt.Errorf("failed to prepare sql statement: %v", err)
 	}
 
 	var totalIrregularVerbsCount int
 	err = preparedSqlStatement.QueryRow(strings.ToLower(letter)).Scan(&totalIrregularVerbsCount)
 	if err != nil {
-		return -1, fmt.Errorf("error executing the sqlQuery for getting totalIrregularVerbsCount from database: %v", err)
+		return -1, fmt.Errorf("failed to execute the sqlQuery for getting totalIrregularVerbsCount from database: %v", err)
 	}
 	defer preparedSqlStatement.Close()
 	return totalIrregularVerbsCount, nil
@@ -41,7 +41,7 @@ func GetIrregularVerbsPageAsText(currentPageNumber int, selectedLetter string) (
 	offset := (currentPageNumber - 1) * IrregularVerbsCountPerPage
 	irregularVerbsListPage, err := GetIrregularVerbsListPage(offset, IrregularVerbsCountPerPage, selectedLetter)
 	if err != nil {
-		return "", fmt.Errorf("error getting irregular irregularVerbs page from database: %v", err)
+		return "", fmt.Errorf("failed to get irregularVerbs page from database: %v", err)
 	}
 	var irregularVerbsPageAsText string
 	for _, verb := range irregularVerbsListPage {
@@ -53,13 +53,13 @@ func GetIrregularVerbsPageAsText(currentPageNumber int, selectedLetter string) (
 func GetIrregularVerbsListPage(offset, limit int, letter string) ([]model.IrregularVerb, error) {
 	db, err := database.GetPostgresClient()
 	if err != nil {
-		return nil, fmt.Errorf("error connecting to postgres database: %v", err)
+		return nil, fmt.Errorf("failed to connect to the postgres database: %v", err)
 	}
 
 	query := "SELECT id, original, verb, past, past_participle FROM irregular_verbs WHERE verb LIKE $3 || '%' LIMIT $1 OFFSET $2"
 	irregularVerbsDatabaseRows, err := db.Query(query, limit, offset, strings.ToLower(letter))
 	if err != nil {
-		return nil, fmt.Errorf("error executing database query: %v", err)
+		return nil, fmt.Errorf("failed to execute the database query: %v", err)
 	}
 	defer irregularVerbsDatabaseRows.Close()
 
@@ -69,12 +69,12 @@ func GetIrregularVerbsListPage(offset, limit int, letter string) ([]model.Irregu
 		var irregularVerb model.IrregularVerb
 		err = irregularVerbsDatabaseRows.Scan(&irregularVerb.ID, &irregularVerb.Original, &irregularVerb.Verb, &irregularVerb.Past, &irregularVerb.PastParticiple)
 		if err != nil {
-			return nil, fmt.Errorf("error scanning row: %v", err)
+			return nil, fmt.Errorf("failed to scan the row: %v", err)
 		}
 		irregularVerbsListPage = append(irregularVerbsListPage, irregularVerb)
 	}
 	if irregularVerbsDatabaseRows.Err() != nil {
-		return nil, fmt.Errorf("error iterating over irregularVerbsDatabaseRows: %v", err)
+		return nil, fmt.Errorf("failed to iterate over irregularVerbsDatabaseRows: %v", err)
 	}
 	return irregularVerbsListPage, nil
 }
@@ -101,7 +101,7 @@ func GetCurrentPageNumber(chatID int64) (int, error) {
 	if ok {
 		return pageNumber, nil
 	} else {
-		return -1, fmt.Errorf("error retrieving current irregular verbs page for a user")
+		return -1, fmt.Errorf("failed to retrieve current irregular verbs page for a user")
 	}
 }
 

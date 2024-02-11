@@ -4,7 +4,6 @@ import (
 	"Yulia-Lingo/internal/telegram/button"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"log"
 	"strings"
 )
 
@@ -35,20 +34,20 @@ func handleIrregularVerbsPaginationButtonsCallback(bot *tgbotapi.BotAPI, callbac
 	msg := tgbotapi.NewEditMessageText(callbackChatID, callbackMessageID, callbackMessageText)
 	_, err := bot.Send(&msg)
 	if err != nil {
-		log.Printf("Error with edit message, err: %v", err)
+		return fmt.Errorf("failed to send the message to a user: %v", err)
 	}
 
 	totalVerbs, err := button.GetTotalIrregularVerbsCount(selectedLetter)
 	if err != nil {
-		return fmt.Errorf("error getting total irregular irregularVerbs count: %v", err)
+		return fmt.Errorf("failed to get the total irregularVerbs count: %v", err)
 	}
 
 	if totalVerbs == 0 {
 		responseText := fmt.Sprintf("К сожалению глаголов начинающихся на латинскую букву - '%s' нет.\n\n", selectedLetter)
 		messageToUser := tgbotapi.NewMessage(callbackChatID, responseText)
-		_, errorMessage := bot.Send(&messageToUser)
-		if errorMessage != nil {
-			return fmt.Errorf("error sending response message for the%s: %v", errorMessage, callbackMessageFromUser)
+		_, err = bot.Send(&messageToUser)
+		if err != nil {
+			return fmt.Errorf("failed to send the message to a user: %v", err)
 		}
 		return nil
 	} else {
@@ -59,7 +58,7 @@ func handleIrregularVerbsPaginationButtonsCallback(bot *tgbotapi.BotAPI, callbac
 
 		irregularVerbsPageAsText, err := button.GetIrregularVerbsPageAsText(currentPageNumber, selectedLetter)
 		if err != nil {
-			return fmt.Errorf("error getting irregular irregularVerbs page as text: %v", err)
+			return fmt.Errorf("failed to get irregular irregularVerbs page as text: %v", err)
 		}
 
 		messageToUser := tgbotapi.NewMessage(callbackChatID, irregularVerbsPageAsText)
@@ -69,7 +68,7 @@ func handleIrregularVerbsPaginationButtonsCallback(bot *tgbotapi.BotAPI, callbac
 
 		_, errorMessage := bot.Send(&messageToUser)
 		if errorMessage != nil {
-			return fmt.Errorf("error sending response message: %v", errorMessage)
+			return fmt.Errorf("failed to send response message: %v", errorMessage)
 		}
 		return nil
 	}
@@ -85,7 +84,7 @@ func handleSelectLetterCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 
 	totalVerbs, err := button.GetTotalIrregularVerbsCount(selectedLetter)
 	if err != nil {
-		return fmt.Errorf("error getting total irregular irregularVerbs count: %v", err)
+		return fmt.Errorf("failed to get total irregular irregularVerbs count: %v", err)
 	}
 
 	if totalVerbs == 0 {
@@ -93,7 +92,7 @@ func handleSelectLetterCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 		messageToUser := tgbotapi.NewMessage(callbackChatID, textOfMessageToUser)
 		_, err = bot.Send(&messageToUser)
 		if err != nil {
-			return fmt.Errorf("error sending response message: %v", err)
+			return fmt.Errorf("failed to send response message: %v", err)
 		}
 		return nil
 	} else {
@@ -104,7 +103,7 @@ func handleSelectLetterCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 
 		irregularVerbsPageAsText, err := button.GetIrregularVerbsPageAsText(currentPageNumber, selectedLetter)
 		if err != nil {
-			return fmt.Errorf("error getting irregular irregularVerbs page as text: %v", err)
+			return fmt.Errorf("failed to get irregular irregularVerbs page as text: %v", err)
 		}
 
 		titleInTextMessageToUser := fmt.Sprintf("Список неправильных глаголов начинающихся на латинскую букву - '%s':\n\n", selectedLetter)
@@ -116,7 +115,7 @@ func handleSelectLetterCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 		}
 		_, errorMessage := bot.Send(&messageToUser)
 		if errorMessage != nil {
-			return fmt.Errorf("error sending response message: %v", errorMessage)
+			return fmt.Errorf("failed to send response message: %v", errorMessage)
 		}
 		return nil
 	}

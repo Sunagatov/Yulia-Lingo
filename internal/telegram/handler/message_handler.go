@@ -28,7 +28,7 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) erro
 			)
 			_, errorMessage := bot.Send(&messageToUser)
 			if errorMessage != nil {
-				return fmt.Errorf("error sending greeting message to as user: %v", errorMessage)
+				return fmt.Errorf("failed to send the greeting message to a user: %v", errorMessage)
 			}
 		}
 	case "🔺 Неправильные глаголы":
@@ -38,7 +38,7 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) erro
 			messageToUser.ReplyMarkup = CreateLetterKeyboardMarkup()
 			_, err := bot.Send(&messageToUser)
 			if err != nil {
-				return fmt.Errorf("error sending messageToUser for 'IrregularVerbs' button: %v", err)
+				return fmt.Errorf("failed to send the message for 'IrregularVerbs' button to a user: %v", err)
 			}
 		}
 	default:
