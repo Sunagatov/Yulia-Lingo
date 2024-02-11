@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"Yulia-Lingo/internal/verb/model"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
@@ -31,12 +32,10 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
 		}
 	case "🔺 Неправильные глаголы":
 		{
-			keyboard := CreateLetterKeyboardMarkup()
-
 			messageText := "С какой буквы вы хотите начать изучение неправильных глаголов?\n------------------------\n"
 
 			message := tgbotapi.NewMessage(chatID, messageText)
-			message.ReplyMarkup = keyboard
+			message.ReplyMarkup = CreateLetterKeyboardMarkup()
 
 			_, err := bot.Send(&message)
 			if err != nil {
@@ -54,7 +53,14 @@ func CreateLetterKeyboardMarkup() tgbotapi.InlineKeyboardMarkup {
 	var currentRow []tgbotapi.InlineKeyboardButton
 
 	for _, letter := range letters {
-		btn := tgbotapi.NewInlineKeyboardButtonData(string(letter), "select_letter_"+string(letter))
+		latterStr := string(letter)
+
+		btn := tgbotapi.NewInlineKeyboardButtonData(latterStr, model.KeyboardVerbValue{
+			Request: "GetListByLatter",
+			Page:    0,
+			Latter:  latterStr,
+		}.ToJSON())
+
 		currentRow = append(currentRow, btn)
 
 		if len(currentRow) == 5 {

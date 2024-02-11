@@ -1,7 +1,7 @@
-package db
+package repository
 
 import (
-	db "Yulia-Lingo/internal/db"
+	"Yulia-Lingo/internal/db"
 	"Yulia-Lingo/internal/verb/model"
 	"fmt"
 	"github.com/tealeg/xlsx"
@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func SaveIrregularVerbs() error {
+func InsertIrregularVerbs() error {
 	postgres, err := db.GetPostgresClient()
 	if err != nil {
 		return fmt.Errorf("can't get postgres client, err: %v", err)
@@ -28,17 +28,18 @@ func SaveIrregularVerbs() error {
 func prepareRequestToDB() (string, error) {
 	verbs, err := readXlsxFile()
 
-	log.Printf("Irregular verbs from xlsx file: %s\n", verbs)
 	if err != nil {
 		return "", fmt.Errorf("can't get clise of verbs, err: %v", err)
 	}
 	var sb strings.Builder
-	query := "INSERT INTO irregular_verbs (original, verb, past, past_participle) VALUES "
+	query := "INSERT INTO irregular_verbs (original, verb, first_letter, past, past_participle) VALUES "
 	for _, verb := range verbs {
-		args := fmt.Sprintf("(%s, %s, %s, %s)", "'"+verb.Original+"'",
-			"'"+verb.Verb+"'",
-			"'"+verb.Past+"'",
-			"'"+verb.PastP+"'")
+		args := fmt.Sprintf("('%s', '%s', '%s', '%s', '%s')",
+			verb.Original,
+			verb.Verb,
+			string(verb.Verb[0]),
+			verb.Past,
+			verb.PastP)
 
 		sb.WriteString(query)
 		sb.WriteString(args)

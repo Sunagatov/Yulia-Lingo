@@ -1,4 +1,4 @@
-package db
+package repository
 
 import (
 	db2 "Yulia-Lingo/internal/db"
@@ -21,13 +21,15 @@ func InitIrregularVerbsTable() error {
 
 	log.Println("Creating new table...")
 	createTableQuery := `
-	CREATE TABLE IF NOT EXISTS irregular_verbs (
-		id SERIAL PRIMARY KEY,
-		Original VARCHAR(255),
-		verb VARCHAR(255),
-		past VARCHAR(255),
-		past_participle VARCHAR(255)
-	)
+		CREATE TABLE IF NOT EXISTS irregular_verbs (
+            id SERIAL PRIMARY KEY,
+            Original VARCHAR(255),
+            verb VARCHAR(255),
+            first_letter VARCHAR(1),
+            past VARCHAR(255),
+            past_participle VARCHAR(255)
+        );
+    CREATE INDEX idx_first_letter ON irregular_verbs(first_letter);
 	`
 	_, err = db.Exec(createTableQuery)
 	if err != nil {
@@ -35,7 +37,7 @@ func InitIrregularVerbsTable() error {
 	}
 	log.Println("Table created successfully.")
 
-	err = SaveIrregularVerbs()
+	err = InsertIrregularVerbs()
 	if err != nil {
 		log.Printf("Can't insert irregular verbs data, err: %v", err)
 	}
