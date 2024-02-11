@@ -5,12 +5,13 @@ import (
 	"Yulia-Lingo/internal/verb/model"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"math"
 	"strconv"
 	"strings"
 )
 
 const (
-	IrregularVerbsPerPage = 10
+	IrregularVerbsCountPerPage = 10
 )
 
 var userContext = make(map[int64]int)
@@ -18,61 +19,74 @@ var userContext = make(map[int64]int)
 func GetTotalIrregularVerbsCount(letter string) (int, error) {
 	db, err := database.GetPostgresClient()
 	if err != nil {
-		return 0, fmt.Errorf("can't connect to postgres, err: %v", err)
+		return -1, fmt.Errorf("error connecting to postgres database: %v", err)
 	}
 
-	var count int
-	query := "SELECT COUNT(*) FROM irregular_verbs WHERE verb LIKE $1 || '%'"
-	stmt, err := db.Prepare(query)
+	sqlQuery := "SELECT COUNT(*) FROM irregular_verbs WHERE verb LIKE $1 || '%'"
+	preparedSqlStatement, err := db.Prepare(sqlQuery)
 	if err != nil {
-		return 0, fmt.Errorf("error preparing statement: %v", err)
+		return -1, fmt.Errorf("error preparing sql statement: %v", err)
 	}
 
-	err = stmt.QueryRow(strings.ToLower(letter)).Scan(&count) // Add '%' around letter for LIKE clause
+	var totalIrregularVerbsCount int
+	err = preparedSqlStatement.QueryRow(strings.ToLower(letter)).Scan(&totalIrregularVerbsCount)
 	if err != nil {
-		return 0, fmt.Errorf("error getting total irregular verbs count: %v", err)
+		return -1, fmt.Errorf("error executing the sqlQuery for getting totalIrregularVerbsCount from database: %v", err)
 	}
-	defer stmt.Close() // Add this line to close the prepared statement
-	return count, nil
+	defer preparedSqlStatement.Close()
+	return totalIrregularVerbsCount, nil
 }
 
-func GetIrregularVerbs(offset, limit int, letter string) ([]model.IrregularVerb, error) {
+func GetIrregularVerbsPageAsText(currentPageNumber int, selectedLetter string) (string, error) {
+	offset := (currentPageNumber - 1) * IrregularVerbsCountPerPage
+	irregularVerbsListPage, err := GetIrregularVerbsListPage(offset, IrregularVerbsCountPerPage, selectedLetter)
+	if err != nil {
+		return "", fmt.Errorf("error getting irregular irregularVerbs page from database: %v", err)
+	}
+	var irregularVerbsPageAsText string
+	for _, verb := range irregularVerbsListPage {
+		irregularVerbsPageAsText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Verb, verb.Past, verb.PastParticiple)
+	}
+	return irregularVerbsPageAsText, nil
+}
+
+func GetIrregularVerbsListPage(offset, limit int, letter string) ([]model.IrregularVerb, error) {
 	db, err := database.GetPostgresClient()
 	if err != nil {
-		return nil, fmt.Errorf("can't connect to postgres, err: %v", err)
+		return nil, fmt.Errorf("error connecting to postgres database: %v", err)
 	}
 
 	query := "SELECT id, original, verb, past, past_participle FROM irregular_verbs WHERE verb LIKE $3 || '%' LIMIT $1 OFFSET $2"
-	rows, err := db.Query(query, limit, offset, strings.ToLower(letter))
+	irregularVerbsDatabaseRows, err := db.Query(query, limit, offset, strings.ToLower(letter))
 	if err != nil {
 		return nil, fmt.Errorf("error executing database query: %v", err)
 	}
-	defer rows.Close()
+	defer irregularVerbsDatabaseRows.Close()
 
-	var verbs []model.IrregularVerb
+	var irregularVerbsListPage []model.IrregularVerb
 
-	for rows.Next() {
-		var verb model.IrregularVerb
-		err := rows.Scan(&verb.ID, &verb.Original, &verb.Verb, &verb.Past, &verb.PastParticiple)
+	for irregularVerbsDatabaseRows.Next() {
+		var irregularVerb model.IrregularVerb
+		err = irregularVerbsDatabaseRows.Scan(&irregularVerb.ID, &irregularVerb.Original, &irregularVerb.Verb, &irregularVerb.Past, &irregularVerb.PastParticiple)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %v", err)
 		}
-		verbs = append(verbs, verb)
+		irregularVerbsListPage = append(irregularVerbsListPage, irregularVerb)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating over rows: %v", err)
+	if irregularVerbsDatabaseRows.Err() != nil {
+		return nil, fmt.Errorf("error iterating over irregularVerbsDatabaseRows: %v", err)
 	}
-
-	return verbs, nil
+	return irregularVerbsListPage, nil
 }
 
-func CreateInlineKeyboard(currentPage int, totalPages int, totalVerbs int, selectedLetter string) tgbotapi.InlineKeyboardMarkup {
+func CreateInlinePaginationButtonsForIrregularVerbsPage(currentPage int, totalVerbs int, selectedLetter string) tgbotapi.InlineKeyboardMarkup {
+	totalPages := int(math.Ceil(float64(totalVerbs) / IrregularVerbsCountPerPage))
+
 	var keyboard []tgbotapi.InlineKeyboardButton
 	if currentPage > 1 {
 		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("⬅️Назад", GetPaginationCallbackData(currentPage-1, selectedLetter)))
 	}
-	if currentPage < totalPages && totalVerbs > IrregularVerbsPerPage {
+	if currentPage < totalPages && totalVerbs > IrregularVerbsCountPerPage {
 		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Вперед ➡️", GetPaginationCallbackData(currentPage+1, selectedLetter)))
 	}
 	return tgbotapi.NewInlineKeyboardMarkup(keyboard)
