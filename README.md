@@ -32,7 +32,7 @@
 Follow the setup instructions in [START.MD](START.md) to get the project up and running.
 
 ## Features
-- Auto-Response Chatbot.
+- Enables to learn all irregular verbs of English language.
 
 ## Contributing
 
