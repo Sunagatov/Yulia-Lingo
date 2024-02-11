@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"Yulia-Lingo/internal/common/service"
 	"Yulia-Lingo/internal/verb/model"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -55,11 +56,12 @@ func CreateLetterKeyboardMarkup() tgbotapi.InlineKeyboardMarkup {
 	for _, letter := range letters {
 		latterStr := string(letter)
 
-		btn := tgbotapi.NewInlineKeyboardButtonData(latterStr, model.KeyboardVerbValue{
+		json := service.ToJSON(model.KeyboardVerbValue{
 			Request: "GetListByLatter",
 			Page:    0,
 			Latter:  latterStr,
-		}.ToJSON())
+		})
+		btn := tgbotapi.NewInlineKeyboardButtonData(latterStr, json)
 
 		currentRow = append(currentRow, btn)
 

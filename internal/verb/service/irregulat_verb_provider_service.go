@@ -1,6 +1,7 @@
 package service
 
 import (
+	"Yulia-Lingo/internal/common/service"
 	"Yulia-Lingo/internal/verb/model"
 	"Yulia-Lingo/internal/verb/repository"
 	"fmt"
@@ -13,8 +14,7 @@ const ListLimit = 10
 func GetVerbsListByLatter(callbackQuery *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI) {
 	callbackData := callbackQuery.Data
 
-	var kv model.KeyboardVerbValue
-	keyboardVerbValue, err := kv.FromJSON(callbackData)
+	keyboardVerbValue, err := model.KeyboardVerbValueFromJSON(callbackData)
 	if err != nil {
 		log.Printf("Can't map keyboardVerbValue, err: %v", err)
 		return
@@ -49,18 +49,20 @@ func GetVerbsListByLatter(callbackQuery *tgbotapi.CallbackQuery, bot *tgbotapi.B
 func createInlineKeyboard(messageToUser *tgbotapi.MessageConfig, currentPage, totalPages int64, letter string) {
 	var keyboard []tgbotapi.InlineKeyboardButton
 	if currentPage > 0 {
-		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Prev page", model.KeyboardVerbValue{
+		jsonPrev := service.ToJSON(model.KeyboardVerbValue{
 			Request: "GetListByLatter",
 			Page:    currentPage - 1,
 			Latter:  letter,
-		}.ToJSON()))
+		})
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Prev page", jsonPrev))
 	}
 	if currentPage < totalPages {
-		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Next page", model.KeyboardVerbValue{
+		jsonNext := service.ToJSON(model.KeyboardVerbValue{
 			Request: "GetListByLatter",
 			Page:    currentPage + 1,
 			Latter:  letter,
-		}.ToJSON()))
+		})
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Next page", jsonNext))
 	}
 
 	if len(keyboard) == 0 {
