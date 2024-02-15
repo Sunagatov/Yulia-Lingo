@@ -1,4 +1,4 @@
-package db
+package database
 
 import (
 	"database/sql"
@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	postgres *sql.DB
-	err      error
+	databaseConnection *sql.DB
+	errors             error
 )
 
 func CreateDatabaseConnection() error {
@@ -18,25 +18,22 @@ func CreateDatabaseConnection() error {
 	user := os.Getenv("POSTGRESQL_USER")
 	password := os.Getenv("POSTGRESQL_PASSWORD")
 	dbname := os.Getenv("POSTGRESQL_DATABASE_NAME")
-
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 
-	postgres, err = sql.Open("postgres", psqlInfo)
-	if err != nil {
-		return fmt.Errorf("error connecting to database: %v", err)
+	databaseConnection, errors = sql.Open("postgres", psqlInfo)
+	if errors != nil {
+		return fmt.Errorf("failed to connect to database: %v", errors)
 	}
-
-	if err = postgres.Ping(); err != nil {
-		return fmt.Errorf("error pinging the database: %v", err)
+	if errors = databaseConnection.Ping(); errors != nil {
+		return fmt.Errorf("failed to ping the postgres database: %v", errors)
 	}
-
 	return nil
 }
 
 func CloseDatabaseConnection() {
-	postgres.Close()
+	databaseConnection.Close()
 }
 
 func GetPostgresClient() (*sql.DB, error) {
-	return postgres, err
+	return databaseConnection, errors
 }

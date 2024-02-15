@@ -3,35 +3,29 @@ package bot_manager
 import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"log"
 	"os"
 )
 
-func CreateTelegramWebhook(bot *tgbotapi.BotAPI) error {
+func ConfigureTelegramBotWebhook(bot *tgbotapi.BotAPI) error {
 	webhookURL := os.Getenv("TELEGRAM_WEBHOOK_URL")
 	if webhookURL == "" {
-		return fmt.Errorf("No WEBHOOK_URL provided in environment variables")
-	} else {
-		log.Println("WebhookURL: " + webhookURL)
+		return fmt.Errorf("failed to read TELEGRAM_WEBHOOK_URL from the environment variables")
 	}
 
-	wh, err := tgbotapi.NewWebhook(webhookURL)
+	webhook, err := tgbotapi.NewWebhook(webhookURL)
 	if err != nil {
-		return fmt.Errorf("Error creating webhook: %v", err)
+		return fmt.Errorf("failed to create webhook: %v", err)
 	}
 
-	_, err = bot.Request(wh)
+	_, err = bot.Request(webhook)
 	if err != nil {
-		return fmt.Errorf("Error setting webhook: %v", err)
+		return fmt.Errorf("failed to set webhook: %v", err)
 	}
 
-	info, err := bot.GetWebhookInfo()
+	_, err = bot.GetWebhookInfo()
 	if err != nil {
-		return fmt.Errorf("Error setting webhook: %v", err)
+		return fmt.Errorf("failed to get webhook info: %v", err)
 	}
 
-	if info.LastErrorDate != 0 {
-		return fmt.Errorf("Telegram callback failed: %s", info.LastErrorMessage)
-	}
 	return nil
 }

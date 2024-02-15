@@ -1,70 +1,58 @@
 package handler
 
 import (
-	"Yulia-Lingo/internal/common/service"
-	"Yulia-Lingo/internal/verb/model"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"log"
 )
 
-func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) {
-	messageFromUser := botUpdate.Message
-	chatID := messageFromUser.Chat.ID
-	textFromUser := messageFromUser.Text
+const (
+	letters            = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	greetingBotMessage = "Здравствуйте, %s %s!\n\nЭто телеграм бот - Yulia-lingo.\n\n" +
+		"Бот поможет вам пополнить словарный запас английского языка.\n\n" +
+		"Сейчас доступен:\n- Список неправильных глаголов."
+)
 
-	switch textFromUser {
+func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) error {
+	chatID := botUpdate.Message.Chat.ID
+	messageFromUser := botUpdate.Message.Text
+
+	switch messageFromUser {
 	case "/start":
 		{
-			userName := botUpdate.Message.From.UserName
-
-			greetingMessageToUser := "Здравствуйте, %s!\n\nЭто телеграм бот - Yulia-lingo.\n\nБот поможет тебе пополнить словарный запас английского языка.\n\nСейчас доступен:\n- Список неправильных глаголов."
-			text := fmt.Sprintf(greetingMessageToUser, userName)
-			msg := tgbotapi.NewMessage(chatID, text)
-			msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(
+			userFirstName := botUpdate.Message.From.FirstName
+			userLastName := botUpdate.Message.From.LastName
+			greetingMessage := fmt.Sprintf(greetingBotMessage, userFirstName, userLastName)
+			messageToUser := tgbotapi.NewMessage(chatID, greetingMessage)
+			messageToUser.ReplyMarkup = tgbotapi.NewReplyKeyboard(
 				tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton("🔺 Неправильные глаголы")),
 			)
-			_, errorMessage := bot.Send(&msg)
-
+			_, errorMessage := bot.Send(&messageToUser)
 			if errorMessage != nil {
-				log.Printf("Error sending response message for /start: %v", errorMessage)
+				return fmt.Errorf("failed to send the greeting message to a user: %v", errorMessage)
 			}
-
 		}
 	case "🔺 Неправильные глаголы":
 		{
-			messageText := "С какой буквы вы хотите начать изучение неправильных глаголов?\n------------------------\n"
-
-			message := tgbotapi.NewMessage(chatID, messageText)
-			message.ReplyMarkup = CreateLetterKeyboardMarkup()
-
-			_, err := bot.Send(&message)
+			messageText := "С какой буквы вы хотите начать изучение неправильных глаголов?\n\n"
+			messageToUser := tgbotapi.NewMessage(chatID, messageText)
+			messageToUser.ReplyMarkup = CreateLetterKeyboardMarkup()
+			_, err := bot.Send(&messageToUser)
 			if err != nil {
-				log.Printf("Error sending message: %v", err)
+				return fmt.Errorf("failed to send the message for 'IrregularVerbs' button to a user: %v", err)
 			}
 		}
 	default:
 	}
+	return nil
 }
-
-const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func CreateLetterKeyboardMarkup() tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var currentRow []tgbotapi.InlineKeyboardButton
 
 	for _, letter := range letters {
-		latterStr := string(letter)
-
-		json := service.ToJSON(model.KeyboardVerbValue{
-			Request: "GetListByLatter",
-			Page:    0,
-			Latter:  latterStr,
-		})
-		btn := tgbotapi.NewInlineKeyboardButtonData(latterStr, json)
-
+		btn := tgbotapi.NewInlineKeyboardButtonData(string(letter), "select_letter_"+string(letter))
 		currentRow = append(currentRow, btn)
-
 		if len(currentRow) == 5 {
 			rows = append(rows, currentRow)
 			currentRow = []tgbotapi.InlineKeyboardButton{}
