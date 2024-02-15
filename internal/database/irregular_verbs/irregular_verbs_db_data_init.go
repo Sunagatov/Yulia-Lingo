@@ -2,7 +2,6 @@ package irregular_verbs
 
 import (
 	"Yulia-Lingo/internal/database"
-	"Yulia-Lingo/internal/database/irregular_verbs/model"
 	"fmt"
 	"github.com/tealeg/xlsx"
 	"log"
@@ -78,8 +77,8 @@ func prepareIrregularVerbsSqlQueryInserts() (string, error) {
 	return sb.String(), nil
 }
 
-func readIrregularVerbsXlsxFile() ([]model.IrregularVerb, error) {
-	var irregularVerbs []model.IrregularVerb
+func readIrregularVerbsXlsxFile() ([]IrregularVerb, error) {
+	var irregularVerbs []IrregularVerb
 
 	irregularVerbsFilePath := os.Getenv("IRREGULAR_VERBS_FILE_PATH")
 	if irregularVerbsFilePath == "" {
@@ -100,7 +99,7 @@ func readIrregularVerbsXlsxFile() ([]model.IrregularVerb, error) {
 		if len(row.Cells) == 0 {
 			break
 		}
-		irregularVerb := model.IrregularVerb{
+		irregularVerb := IrregularVerb{
 			Verb:           row.Cells[1].String(),
 			Past:           row.Cells[2].String(),
 			PastParticiple: row.Cells[3].String(),
