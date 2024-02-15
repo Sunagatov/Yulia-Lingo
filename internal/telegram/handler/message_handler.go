@@ -1,8 +1,10 @@
 package handler
 
 import (
+	irregularVerbsManager "Yulia-Lingo/internal/database/irregular_verbs"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"log"
 )
 
 const (
@@ -33,10 +35,17 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) erro
 		}
 	case "🔺 Неправильные глаголы":
 		{
+			inlineKeyboardMarkup, err := CreateLetterKeyboardMarkup()
+			if err != nil {
+				return fmt.Errorf("failed to create inlineKeyboardMarkup: %v", err)
+			}
+			log.Printf("inlineKeyboardMarkup: %v", inlineKeyboardMarkup)
+
 			messageText := "С какой буквы вы хотите начать изучение неправильных глаголов?\n\n"
 			messageToUser := tgbotapi.NewMessage(chatID, messageText)
-			messageToUser.ReplyMarkup = CreateLetterKeyboardMarkup()
-			_, err := bot.Send(&messageToUser)
+			messageToUser.ReplyMarkup = inlineKeyboardMarkup
+
+			_, err = bot.Send(&messageToUser)
 			if err != nil {
 				return fmt.Errorf("failed to send the message for 'IrregularVerbs' button to a user: %v", err)
 			}
@@ -46,13 +55,24 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) erro
 	return nil
 }
 
-func CreateLetterKeyboardMarkup() tgbotapi.InlineKeyboardMarkup {
+func CreateLetterKeyboardMarkup() (*tgbotapi.InlineKeyboardMarkup, error) {
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var currentRow []tgbotapi.InlineKeyboardButton
 
 	for _, letter := range letters {
-		btn := tgbotapi.NewInlineKeyboardButtonData(string(letter), "select_letter_"+string(letter))
+		letterAsString := string(letter)
+		requestData := irregularVerbsManager.KeyboardVerbValue{
+			Request: "IrregularVerbs",
+			Page:    0,
+			Latter:  letterAsString,
+		}
+		jsonAsString, err := irregularVerbsManager.ConvertToJson(requestData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create JSON for letter '%v': %v", letterAsString, err)
+		}
+		btn := tgbotapi.NewInlineKeyboardButtonData(letterAsString, jsonAsString)
 		currentRow = append(currentRow, btn)
+
 		if len(currentRow) == 5 {
 			rows = append(rows, currentRow)
 			currentRow = []tgbotapi.InlineKeyboardButton{}
@@ -61,5 +81,5 @@ func CreateLetterKeyboardMarkup() tgbotapi.InlineKeyboardMarkup {
 	if len(currentRow) > 0 {
 		rows = append(rows, currentRow)
 	}
-	return tgbotapi.NewInlineKeyboardMarkup(rows...)
+	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: rows}, nil
 }
