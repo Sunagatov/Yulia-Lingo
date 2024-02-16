@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -26,21 +25,6 @@ type TranslationEntry struct {
 	Word                string   `json:"word"`
 	ReverseTranslations []string `json:"reverse_translation"`
 	Score               float64  `json:"score"`
-}
-
-func RequestTranslateAPI(wordToTranslate string) (string, error) {
-	maxTranslations := 5
-	translation, err := TranslateWord(wordToTranslate)
-	if err != nil {
-		fmt.Printf("Error translating word: %v\n", err)
-		return "", err
-	}
-	formattedTranslation, err := FormatTranslation(maxTranslations, translation, wordToTranslate)
-	if err != nil {
-		fmt.Printf("Error formatting translation: %v\n", err)
-		return "", err
-	}
-	return formattedTranslation, nil
 }
 
 func TranslateWord(word string) (Translation, error) {
@@ -78,29 +62,4 @@ func ConvertToTranslateResponse(httpResponse *http.Response) (Translation, error
 		return translation, err
 	}
 	return translation, nil
-}
-
-func FormatTranslation(maxTranslations int, translation Translation, wordToTranslate string) (string, error) {
-	var formattedTranslation strings.Builder
-
-	formattedTranslation.WriteString(fmt.Sprintf("*Полный перевод слова:* '%s'\n", wordToTranslate))
-	formattedTranslation.WriteString(strings.Repeat("-", 5) + "\n")
-
-	for _, entry := range translation.Dictionary {
-		formattedTranslation.WriteString(fmt.Sprintf("*Часть речи:* '%s'\n\n", entry.PartOfSpeech))
-
-		if len(entry.Terms) > 0 {
-			if maxTranslations > len(entry.Terms) {
-				maxTranslations = len(entry.Terms)
-			}
-			translations := make([]string, maxTranslations)
-			copy(translations, entry.Terms[:maxTranslations])
-
-			formattedTranslation.WriteString(fmt.Sprintf("*Перевод слова:*\n%s\n", "*[*"+strings.Join(translations, ", ")+"*]*"))
-		}
-
-		formattedTranslation.WriteString(strings.Repeat("-", 30) + "\n")
-	}
-
-	return formattedTranslation.String(), nil
 }

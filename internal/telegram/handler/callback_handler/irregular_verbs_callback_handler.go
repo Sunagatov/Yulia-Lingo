@@ -2,10 +2,11 @@ package callback_handler
 
 import (
 	irregularVerbsRepository "Yulia-Lingo/internal/database/irregular_verbs"
+	utilService "Yulia-Lingo/internal/util_services"
+
 	"encoding/json"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"strings"
 )
 
 const IrregularVerbsCountPerPage = 5
@@ -34,11 +35,11 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 
 	var responseText string
 	if irregularVerbsPageAsText != "" {
-		responseText = strings.Repeat("-", 30) + "\n" +
+		responseText = utilService.GetMessageDelimiter() + "\n" +
 			fmt.Sprintf("*Список неправильных глаголов на букву '%s':*\n\n", selectedLetter) +
 			irregularVerbsPageAsText
 	} else {
-		responseText = strings.Repeat("-", 30) + "\n" +
+		responseText = utilService.GetMessageDelimiter() + "\n" +
 			fmt.Sprintf("*Список неправильных глаголов на букву '%s' пуст*", selectedLetter)
 	}
 
@@ -85,7 +86,7 @@ func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyb
 
 	var keyboard []tgbotapi.InlineKeyboardButton
 	if currentPage > 0 {
-		jsonPrev, err := ConvertToJson(KeyboardVerbValue{
+		jsonPrev, err := utilService.ConvertToJson(KeyboardVerbValue{
 			Request: "IrregularVerbs",
 			Page:    currentPage - 1,
 			Latter:  letter,
@@ -96,7 +97,7 @@ func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyb
 		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Prev page", jsonPrev))
 	}
 	if currentPage < totalPages && totalVerbs > IrregularVerbsCountPerPage {
-		jsonNext, err := ConvertToJson(KeyboardVerbValue{
+		jsonNext, err := utilService.ConvertToJson(KeyboardVerbValue{
 			Request: "IrregularVerbs",
 			Page:    currentPage + 1,
 			Latter:  letter,
@@ -112,14 +113,6 @@ func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyb
 	}
 
 	return keyboard, nil
-}
-
-func ConvertToJson(entity interface{}) (string, error) {
-	jsonBytes, err := json.Marshal(entity)
-	if err != nil {
-		return "", fmt.Errorf("failed to create a json: %v", err)
-	}
-	return string(jsonBytes), nil
 }
 
 func KeyboardVerbValueFromJSON(jsonStr string) (KeyboardVerbValue, error) {

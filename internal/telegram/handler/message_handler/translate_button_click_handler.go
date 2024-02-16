@@ -2,10 +2,14 @@ package message_handler
 
 import (
 	"Yulia-Lingo/internal/api"
+	utilService "Yulia-Lingo/internal/util_services"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"regexp"
+	"strings"
 )
+
+const MaxTranslations = 5
 
 func HandleDefaultCaseUserMessage(bot *tgbotapi.BotAPI, textFromUser string, chatID int64) error {
 	if !isValidWord(textFromUser) {
@@ -18,7 +22,7 @@ func HandleDefaultCaseUserMessage(bot *tgbotapi.BotAPI, textFromUser string, cha
 		return fmt.Errorf("failed to handle default case for user's message because user's message has incorrect format of text")
 	}
 
-	responseMessage, err := api.RequestTranslateAPI(textFromUser)
+	responseMessage, err := RequestTranslateAPI(textFromUser)
 	if err != nil {
 		return fmt.Errorf("failed to fetch from API: %v", err)
 	}
@@ -41,4 +45,43 @@ func isValidWord(word string) bool {
 	const pattern = `^[A-Za-z]+$`
 	matched, _ := regexp.MatchString(pattern, word)
 	return matched
+}
+
+func RequestTranslateAPI(wordToTranslate string) (string, error) {
+	translation, err := api.TranslateWord(wordToTranslate)
+	if err != nil {
+		fmt.Printf("Error translating word: %v\n", err)
+		return "", err
+	}
+	formattedTranslation, err := FormatTranslation(MaxTranslations, translation, wordToTranslate)
+	if err != nil {
+		fmt.Printf("Error formatting translation: %v\n", err)
+		return "", err
+	}
+	return formattedTranslation, nil
+}
+
+func FormatTranslation(maxTranslations int, translation api.Translation, wordToTranslate string) (string, error) {
+	var formattedTranslation strings.Builder
+
+	formattedTranslation.WriteString(fmt.Sprintf("*Полный перевод слова:* '%s'\n", wordToTranslate))
+	formattedTranslation.WriteString(strings.Repeat("-", 5) + "\n")
+
+	for _, entry := range translation.Dictionary {
+		formattedTranslation.WriteString(fmt.Sprintf("*Часть речи:* '%s'\n\n", entry.PartOfSpeech))
+
+		if len(entry.Terms) > 0 {
+			if maxTranslations > len(entry.Terms) {
+				maxTranslations = len(entry.Terms)
+			}
+			translations := make([]string, maxTranslations)
+			copy(translations, entry.Terms[:maxTranslations])
+
+			formattedTranslation.WriteString(fmt.Sprintf("*Перевод слова:*\n%s\n", "*[*"+strings.Join(translations, ", ")+"*]*"))
+		}
+
+		formattedTranslation.WriteString(utilService.GetMessageDelimiter() + "\n")
+	}
+
+	return formattedTranslation.String(), nil
 }

@@ -1,7 +1,8 @@
 package message_handler
 
 import (
-	irregularVerbsManager "Yulia-Lingo/internal/database/irregular_verbs"
+	"Yulia-Lingo/internal/telegram/handler/callback_handler"
+	utilService "Yulia-Lingo/internal/util_services"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -32,12 +33,12 @@ func CreateLetterKeyboardMarkup() (*tgbotapi.InlineKeyboardMarkup, error) {
 
 	for _, letter := range letters {
 		letterAsString := string(letter)
-		requestData := irregularVerbsManager.KeyboardVerbValue{
+		requestData := callback_handler.KeyboardVerbValue{
 			Request: "IrregularVerbs",
 			Page:    0,
 			Latter:  letterAsString,
 		}
-		jsonAsString, err := irregularVerbsManager.ConvertToJson(requestData)
+		jsonAsString, err := utilService.ConvertToJson(requestData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create JSON for letter '%v': %v", letterAsString, err)
 		}
