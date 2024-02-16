@@ -14,8 +14,9 @@ func HandleIrregularVerbsButtonClick(bot *tgbotapi.BotAPI, chatID int64) error {
 		return fmt.Errorf("failed to create inlineKeyboardMarkup: %v", err)
 	}
 
-	messageText := "С какой буквы вы хотите начать изучение неправильных глаголов?\n\n"
+	messageText := "*С какой буквы вы хотите начать изучение неправильных глаголов?*\n\n"
 	messageToUser := tgbotapi.NewMessage(chatID, messageText)
+	messageToUser.ParseMode = "Markdown"
 	messageToUser.ReplyMarkup = inlineKeyboardMarkup
 
 	_, err = bot.Send(&messageToUser)

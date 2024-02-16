@@ -3,12 +3,9 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"io"
-	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 )
 
@@ -29,43 +26,6 @@ type TranslationEntry struct {
 	Word                string   `json:"word"`
 	ReverseTranslations []string `json:"reverse_translation"`
 	Score               float64  `json:"score"`
-}
-
-func inputWordValidator(bot *tgbotapi.BotAPI, textFromUser string, chatID int64) error {
-	if !isValidWord(textFromUser) {
-		responseMessage := "Пожалуйста, отправьте корректное слово на английском языке"
-		messageToUser := tgbotapi.NewMessage(chatID, responseMessage)
-		_, sendingMessageError := bot.Send(&messageToUser)
-		if sendingMessageError != nil {
-			return fmt.Errorf("error sending message to a user: %v", sendingMessageError)
-		}
-		return fmt.Errorf("incorrect format of text")
-	}
-
-	return nil
-}
-
-func translateInputWords(textFromUser string, chatID int64) tgbotapi.MessageConfig {
-	responseMessage, err := RequestTranslateAPI(textFromUser)
-	if err != nil {
-		log.Printf("Error fetching from API: %v", err)
-		responseMessage = "Sorry, there was an error processing your request."
-	}
-	return tgbotapi.NewMessage(chatID, responseMessage)
-}
-
-func addKeyboardMarkup(messageToUser *tgbotapi.MessageConfig) {
-	messageToUser.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Сохранить", "save_word_option"),
-		),
-	)
-}
-
-func isValidWord(word string) bool {
-	const pattern = `^[A-Za-z]+$`
-	matched, _ := regexp.MatchString(pattern, word)
-	return matched
 }
 
 func RequestTranslateAPI(wordToTranslate string) (string, error) {
@@ -123,26 +83,23 @@ func ConvertToTranslateResponse(httpResponse *http.Response) (Translation, error
 func FormatTranslation(maxTranslations int, translation Translation, wordToTranslate string) (string, error) {
 	var formattedTranslation strings.Builder
 
-	formattedTranslation.WriteString(fmt.Sprintf("Original Word: %s\n\n", wordToTranslate))
+	formattedTranslation.WriteString(fmt.Sprintf("*Полный перевод слова:* '%s'\n\n", wordToTranslate))
+	formattedTranslation.WriteString(strings.Repeat("-", 5) + "\n\n")
 
 	for _, entry := range translation.Dictionary {
-		formattedTranslation.WriteString(fmt.Sprintf("Part of Speech: %s\n", entry.PartOfSpeech))
-		formattedTranslation.WriteString(fmt.Sprintf("Base Form: %s\n", entry.BaseForm))
+		formattedTranslation.WriteString(fmt.Sprintf("*Часть речи:* '%s'\n\n", entry.PartOfSpeech))
 
 		if len(entry.Terms) > 0 {
-			formattedTranslation.WriteString(fmt.Sprintf("Terms: %s\n", strings.Join(entry.Terms, ", ")))
-		}
-
-		formattedTranslation.WriteString("\nTranslations:\n")
-		for i, translationEntry := range entry.Translations {
-			if i >= maxTranslations {
-				break
+			if maxTranslations > len(entry.Terms) {
+				maxTranslations = len(entry.Terms)
 			}
-			formattedTranslation.WriteString(fmt.Sprintf("\n  Word: %s\n", translationEntry.Word))
-			formattedTranslation.WriteString(fmt.Sprintf("  Reverse Translations: %s\n", strings.Join(translationEntry.ReverseTranslations, ", ")))
+			translations := make([]string, maxTranslations)
+			copy(translations, entry.Terms[:maxTranslations])
+
+			formattedTranslation.WriteString(fmt.Sprintf("*Перевод слова:*\n%s\n", strings.Join(translations, ", ")))
 		}
 
-		formattedTranslation.WriteString(strings.Repeat("-", 40) + "\n\n")
+		formattedTranslation.WriteString(strings.Repeat("-", 30) + "\n\n")
 	}
 
 	return formattedTranslation.String(), nil

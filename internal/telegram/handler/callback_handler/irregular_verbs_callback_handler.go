@@ -24,9 +24,9 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 
 	var responseText string
 	if irregularVerbsPageAsText != "" {
-		responseText = fmt.Sprintf("Список неправильных глаголов на букву '%s':\n\n", selectedLetter) + irregularVerbsPageAsText
+		responseText = fmt.Sprintf("*Список неправильных глаголов на букву '%s':*\n\n", selectedLetter) + irregularVerbsPageAsText
 	} else {
-		responseText = fmt.Sprintf("Список неправильных глаголов на букву '%s' пуст", selectedLetter)
+		responseText = fmt.Sprintf("*Список неправильных глаголов на букву '%s' пуст*", selectedLetter)
 	}
 
 	keyboard, err := irregularVerbsManager.CreateInlineKeyboard(keyboardVerbValue.Page, selectedLetter)
@@ -35,6 +35,7 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 	}
 
 	messageToUser := tgbotapi.NewMessage(callbackChatId, responseText)
+	messageToUser.ParseMode = "Markdown"
 	if keyboard != nil {
 		messageToUser.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard)
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	IrregularVerbsCountPerPage          = 10
+	IrregularVerbsCountPerPage          = 7
 	GetTotalIrregularVerbsCountSqlQuery = "SELECT COUNT(*) FROM irregular_verbs WHERE verb LIKE $1 || '%'"
 	GetIrregularVerbsListPageSqlQuery   = "SELECT id, original, verb, past, past_participle FROM irregular_verbs WHERE verb LIKE $3 || '%' LIMIT $1 OFFSET $2"
 )
@@ -59,7 +59,7 @@ func GetIrregularVerbsPageAsText(currentPageNumber int, selectedLetter string) (
 	}
 	var irregularVerbsPageAsText string
 	for _, verb := range irregularVerbsListPage {
-		irregularVerbsPageAsText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Verb, verb.Past, verb.PastParticiple)
+		irregularVerbsPageAsText += fmt.Sprintf("*%s* - *[*%s - %s - %s*]*\n\n", verb.Original, verb.Verb, verb.Past, verb.PastParticiple)
 	}
 	return irregularVerbsPageAsText, nil
 }

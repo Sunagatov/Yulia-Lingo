@@ -20,6 +20,6 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) erro
 	case IrregularVerbsCommand:
 		return messageHandler.HandleIrregularVerbsButtonClick(bot, chatID)
 	default:
-		return nil
+		return messageHandler.HandleDefaultCaseUserMessage(bot, messageFromUser, chatID)
 	}
 }

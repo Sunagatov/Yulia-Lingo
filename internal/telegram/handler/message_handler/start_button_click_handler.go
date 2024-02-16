@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	greetingBotMessage = "Здравствуйте, %s %s!\n\nЭто телеграм бот - Yulia-lingo.\n\n" +
-		"Бот поможет вам пополнить словарный запас английского языка.\n\n" +
-		"Сейчас доступен:\n- Список неправильных глаголов."
+	greetingBotMessage = "Здравствуйте, *%s %s*!\n\nЭто телеграм бот - *Yulia-lingo*.\n\n" +
+		"Бот поможет вам пополнить *словарный запас английского языка*.\n\n" +
+		"*Сейчас доступен:*\n- Список неправильных глаголов."
 )
 
 func HandleStartButtonClick(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update, chatID int64) error {
@@ -17,6 +17,7 @@ func HandleStartButtonClick(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update, cha
 		userLastName := botUpdate.Message.From.LastName
 		greetingMessage := fmt.Sprintf(greetingBotMessage, userFirstName, userLastName)
 		messageToUser := tgbotapi.NewMessage(chatID, greetingMessage)
+		messageToUser.ParseMode = "Markdown"
 		messageToUser.ReplyMarkup = tgbotapi.NewReplyKeyboard(
 			tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton("🔺 Неправильные глаголы")),
 		)
