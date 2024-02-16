@@ -94,7 +94,7 @@ func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyb
 		if err != nil {
 			return nil, fmt.Errorf("failed to create a json for the case (currentPage > 0): %v", err)
 		}
-		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Prev page", jsonPrev))
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("⬅️Назад", jsonPrev))
 	}
 	if currentPage < totalPages && totalVerbs > IrregularVerbsCountPerPage {
 		jsonNext, err := utilService.ConvertToJson(KeyboardVerbValue{
@@ -105,7 +105,7 @@ func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyb
 		if err != nil {
 			return nil, fmt.Errorf("failed to create a json for the case (currentPage < totalPages): %v", err)
 		}
-		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Next page", jsonNext))
+		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Вперед ➡️", jsonNext))
 	}
 
 	if len(keyboard) == 0 {
