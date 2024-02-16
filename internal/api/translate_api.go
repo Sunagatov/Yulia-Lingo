@@ -83,8 +83,8 @@ func ConvertToTranslateResponse(httpResponse *http.Response) (Translation, error
 func FormatTranslation(maxTranslations int, translation Translation, wordToTranslate string) (string, error) {
 	var formattedTranslation strings.Builder
 
-	formattedTranslation.WriteString(fmt.Sprintf("*Полный перевод слова:* '%s'\n\n", wordToTranslate))
-	formattedTranslation.WriteString(strings.Repeat("-", 5) + "\n\n")
+	formattedTranslation.WriteString(fmt.Sprintf("*Полный перевод слова:* '%s'\n", wordToTranslate))
+	formattedTranslation.WriteString(strings.Repeat("-", 5) + "\n")
 
 	for _, entry := range translation.Dictionary {
 		formattedTranslation.WriteString(fmt.Sprintf("*Часть речи:* '%s'\n\n", entry.PartOfSpeech))
@@ -96,10 +96,10 @@ func FormatTranslation(maxTranslations int, translation Translation, wordToTrans
 			translations := make([]string, maxTranslations)
 			copy(translations, entry.Terms[:maxTranslations])
 
-			formattedTranslation.WriteString(fmt.Sprintf("*Перевод слова:*\n%s\n", strings.Join(translations, ", ")))
+			formattedTranslation.WriteString(fmt.Sprintf("*Перевод слова:*\n%s\n", "*[*"+strings.Join(translations, ", ")+"*]*"))
 		}
 
-		formattedTranslation.WriteString(strings.Repeat("-", 30) + "\n\n")
+		formattedTranslation.WriteString(strings.Repeat("-", 30) + "\n")
 	}
 
 	return formattedTranslation.String(), nil
