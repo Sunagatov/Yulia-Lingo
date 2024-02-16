@@ -5,14 +5,19 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+const (
+	StartTelegramBotCommand = "/start"
+	IrregularVerbsCommand   = "🔺 Неправильные глаголы"
+)
+
 func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) error {
 	chatID := botUpdate.Message.Chat.ID
 	messageFromUser := botUpdate.Message.Text
 
 	switch messageFromUser {
-	case "/start":
+	case StartTelegramBotCommand:
 		return messageHandler.HandleStartButtonClick(bot, botUpdate, chatID)
-	case "🔺 Неправильные глаголы":
+	case IrregularVerbsCommand:
 		return messageHandler.HandleIrregularVerbsButtonClick(bot, chatID)
 	default:
 		return nil
