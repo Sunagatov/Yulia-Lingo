@@ -8,6 +8,7 @@ import (
 
 func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI) error {
 	callbackData := callbackQuery.Data
+	callbackChatId := callbackQuery.Message.Chat.ID
 
 	keyboardVerbValue, err := irregularVerbsManager.KeyboardVerbValueFromJSON(callbackData)
 	if err != nil {
@@ -17,22 +18,28 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 	selectedLetter := keyboardVerbValue.Latter
 	currentPageNumber := keyboardVerbValue.Page
 
-	irregularVerbsPageTitle := fmt.Sprintf("Список неправильных глаголов на букву '%s':\n\n", selectedLetter)
 	irregularVerbsPageAsText, err := irregularVerbsManager.GetIrregularVerbsPageAsText(currentPageNumber, selectedLetter)
 	if err != nil {
 		return fmt.Errorf("failed to get irregular irregularVerbs page as text: %v", err)
 	}
 
+	var irregularVerbsPageTitle string
+	if irregularVerbsPageAsText != "" {
+		irregularVerbsPageTitle = fmt.Sprintf("Список неправильных глаголов на букву '%s':\n\n", selectedLetter)
+	} else {
+		irregularVerbsPageTitle = fmt.Sprintf("Список неправильных глаголов на букву '%s' пуст", selectedLetter)
+	}
+
 	responseText := irregularVerbsPageTitle + irregularVerbsPageAsText
 
-	totalPage, err := irregularVerbsManager.GetTotalPage(selectedLetter)
-	if err != nil {
-		return fmt.Errorf("failed to get total page: %v", err)
-	}
-	messageToUser := tgbotapi.NewMessage(callbackQuery.Message.Chat.ID, responseText)
-	err = irregularVerbsManager.CreateInlineKeyboard(&messageToUser, keyboardVerbValue.Page, totalPage, selectedLetter)
+	keyboard, err := irregularVerbsManager.CreateInlineKeyboard(keyboardVerbValue.Page, selectedLetter)
 	if err != nil {
 		return fmt.Errorf("failed to inline keyboard: %v", err)
+	}
+
+	messageToUser := tgbotapi.NewMessage(callbackChatId, responseText)
+	if keyboard != nil {
+		messageToUser.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard)
 	}
 
 	_, err = bot.Send(&messageToUser)

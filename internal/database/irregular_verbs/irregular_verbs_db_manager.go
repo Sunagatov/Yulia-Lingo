@@ -54,6 +54,9 @@ func GetIrregularVerbsPageAsText(currentPageNumber int, selectedLetter string) (
 	if err != nil {
 		return "", fmt.Errorf("failed to get irregularVerbs page from database: %v", err)
 	}
+	if len(irregularVerbsListPage) == 0 {
+		return "", nil
+	}
 	var irregularVerbsPageAsText string
 	for _, verb := range irregularVerbsListPage {
 		irregularVerbsPageAsText += fmt.Sprintf("%s - [%s - %s - %s]\n", verb.Original, verb.Verb, verb.Past, verb.PastParticiple)
@@ -106,7 +109,13 @@ func KeyboardVerbValueFromJSON(jsonStr string) (KeyboardVerbValue, error) {
 	return kv, nil
 }
 
-func CreateInlineKeyboard(messageToUser *tgbotapi.MessageConfig, currentPage, totalPages int, letter string) error {
+func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyboardButton, error) {
+	totalVerbs, err := GetTotalIrregularVerbsCount(letter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get total irregular verbs count: %v", err)
+	}
+	totalPages := totalVerbs / IrregularVerbsCountPerPage
+
 	var keyboard []tgbotapi.InlineKeyboardButton
 	if currentPage > 0 {
 		jsonPrev, err := ConvertToJson(KeyboardVerbValue{
@@ -115,34 +124,25 @@ func CreateInlineKeyboard(messageToUser *tgbotapi.MessageConfig, currentPage, to
 			Latter:  letter,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to create a json for the case (currentPage > 0): %v", err)
+			return nil, fmt.Errorf("failed to create a json for the case (currentPage > 0): %v", err)
 		}
 		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Prev page", jsonPrev))
 	}
-	if currentPage < totalPages {
+	if currentPage < totalPages && totalVerbs > IrregularVerbsCountPerPage {
 		jsonNext, err := ConvertToJson(KeyboardVerbValue{
 			Request: "IrregularVerbs",
 			Page:    currentPage + 1,
 			Latter:  letter,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to create a json for the case (currentPage < totalPages): %v", err)
+			return nil, fmt.Errorf("failed to create a json for the case (currentPage < totalPages): %v", err)
 		}
 		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("Next page", jsonNext))
 	}
 
 	if len(keyboard) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	messageToUser.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard)
-	return nil
-}
-
-func GetTotalPage(letter string) (int, error) {
-	totalVerbs, err := GetTotalIrregularVerbsCount(letter)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get total irregular verbs count: %v", err)
-	}
-	return totalVerbs / IrregularVerbsCountPerPage, nil
+	return keyboard, nil
 }
