@@ -102,11 +102,11 @@ func InitIrregularVerbsTable() error {
 	}
 	log.Println("Database table for irregular verbs was created successfully.")
 
-	query, err := prepareIrregularVerbsSqlQueryInserts()
+	sqlQueryInserts, err := prepareIrregularVerbsSqlQueryInserts()
 	if err != nil {
 		return fmt.Errorf("failed to prepare sqlQuery inserts ti fill the irregular verbs database table: %v", err)
 	}
-	_, err = db.Exec(query)
+	_, err = db.Exec(sqlQueryInserts)
 	if err != nil {
 		return fmt.Errorf("failed to insert irregular verbs data to the database table: %v", err)
 	}
