@@ -14,7 +14,6 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 	if err != nil {
 		return fmt.Errorf("failed to map keyboardVerbValue: %v", err)
 	}
-
 	selectedLetter := keyboardVerbValue.Latter
 	currentPageNumber := keyboardVerbValue.Page
 
@@ -23,14 +22,12 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 		return fmt.Errorf("failed to get irregular irregularVerbs page as text: %v", err)
 	}
 
-	var irregularVerbsPageTitle string
+	var responseText string
 	if irregularVerbsPageAsText != "" {
-		irregularVerbsPageTitle = fmt.Sprintf("Список неправильных глаголов на букву '%s':\n\n", selectedLetter)
+		responseText = fmt.Sprintf("Список неправильных глаголов на букву '%s':\n\n", selectedLetter) + irregularVerbsPageAsText
 	} else {
-		irregularVerbsPageTitle = fmt.Sprintf("Список неправильных глаголов на букву '%s' пуст", selectedLetter)
+		responseText = fmt.Sprintf("Список неправильных глаголов на букву '%s' пуст", selectedLetter)
 	}
-
-	responseText := irregularVerbsPageTitle + irregularVerbsPageAsText
 
 	keyboard, err := irregularVerbsManager.CreateInlineKeyboard(keyboardVerbValue.Page, selectedLetter)
 	if err != nil {
