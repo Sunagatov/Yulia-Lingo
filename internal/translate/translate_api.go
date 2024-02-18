@@ -1,6 +1,7 @@
-package api
+package translate
 
 import (
+	"Yulia-Lingo/internal/util_services"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -33,7 +34,7 @@ func TranslateWord(word string) (Translation, error) {
 	apiKey := os.Getenv("YOUR_TRANSLATE_API_KEY")
 	apiHost := os.Getenv("YOUR_TRANSLATE_API_HOST")
 
-	newHTTPRequest, err := CreatePostHTTPRequest(url, apiKey, apiHost, payload)
+	newHTTPRequest, err := util_services.CreatePostHTTPRequest(url, apiKey, apiHost, payload)
 	if err != nil {
 		return Translation{}, err
 	}

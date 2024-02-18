@@ -1,7 +1,6 @@
-package message_handler
+package irregular_verbs
 
 import (
-	"Yulia-Lingo/internal/telegram/handler/callback_handler"
 	utilService "Yulia-Lingo/internal/util_services"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -33,7 +32,7 @@ func CreateLetterKeyboardMarkup() (*tgbotapi.InlineKeyboardMarkup, error) {
 
 	for _, letter := range letters {
 		letterAsString := string(letter)
-		requestData := callback_handler.KeyboardVerbValue{
+		requestData := KeyboardVerbValue{
 			Request: "IrregularVerbs",
 			Page:    0,
 			Latter:  letterAsString,

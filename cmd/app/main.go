@@ -2,7 +2,7 @@ package main
 
 import (
 	dbmanager "Yulia-Lingo/internal/database"
-	irregularVerbsManager "Yulia-Lingo/internal/database/irregular_verbs"
+	irregularVerbsManager "Yulia-Lingo/internal/irregular_verbs"
 	"Yulia-Lingo/internal/telegram/bot_manager"
 	"Yulia-Lingo/internal/telegram/handler"
 	_ "github.com/lib/pq"

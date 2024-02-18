@@ -1,7 +1,6 @@
-package message_handler
+package translate
 
 import (
-	"Yulia-Lingo/internal/api"
 	utilService "Yulia-Lingo/internal/util_services"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -31,7 +30,10 @@ func HandleDefaultCaseUserMessage(bot *tgbotapi.BotAPI, textFromUser string, cha
 	messageToUser.ParseMode = "Markdown"
 	messageToUser.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Сохранить", "save_word_option"),
+			tgbotapi.NewInlineKeyboardButtonData("💾Сохранить слово в словарь", "save_word_option"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("✅Пометить слово как выученное", "save_word_option"),
 		),
 	)
 	_, err = bot.Send(&messageToUser)
@@ -48,7 +50,7 @@ func isValidWord(word string) bool {
 }
 
 func RequestTranslateAPI(wordToTranslate string) (string, error) {
-	translation, err := api.TranslateWord(wordToTranslate)
+	translation, err := TranslateWord(wordToTranslate)
 	if err != nil {
 		fmt.Printf("Error translating word: %v\n", err)
 		return "", err
@@ -61,7 +63,7 @@ func RequestTranslateAPI(wordToTranslate string) (string, error) {
 	return formattedTranslation, nil
 }
 
-func FormatTranslation(maxTranslations int, translation api.Translation, wordToTranslate string) (string, error) {
+func FormatTranslation(maxTranslations int, translation Translation, wordToTranslate string) (string, error) {
 	var formattedTranslation strings.Builder
 
 	formattedTranslation.WriteString(fmt.Sprintf("*Полный перевод слова:* '%s'\n", wordToTranslate))

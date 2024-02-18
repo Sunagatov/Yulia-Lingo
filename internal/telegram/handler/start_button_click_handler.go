@@ -1,4 +1,4 @@
-package message_handler
+package handler
 
 import (
 	"fmt"

@@ -1,7 +1,6 @@
-package callback_handler
+package irregular_verbs
 
 import (
-	irregularVerbsRepository "Yulia-Lingo/internal/database/irregular_verbs"
 	utilService "Yulia-Lingo/internal/util_services"
 
 	"encoding/json"
@@ -63,7 +62,7 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 
 func GetIrregularVerbsPageAsText(currentPageNumber int, selectedLetter string) (string, error) {
 	offset := currentPageNumber * IrregularVerbsCountPerPage
-	irregularVerbsListPage, err := irregularVerbsRepository.GetIrregularVerbsListPage(offset, IrregularVerbsCountPerPage, selectedLetter)
+	irregularVerbsListPage, err := GetIrregularVerbsListPage(offset, IrregularVerbsCountPerPage, selectedLetter)
 	if err != nil {
 		return "", fmt.Errorf("failed to get irregularVerbs page from database: %v", err)
 	}
@@ -78,7 +77,7 @@ func GetIrregularVerbsPageAsText(currentPageNumber int, selectedLetter string) (
 }
 
 func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyboardButton, error) {
-	totalVerbs, err := irregularVerbsRepository.GetTotalIrregularVerbsCount(letter)
+	totalVerbs, err := GetTotalIrregularVerbsCount(letter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get total irregular verbs count: %v", err)
 	}

@@ -1,7 +1,8 @@
 package handler
 
 import (
-	messageHandler "Yulia-Lingo/internal/telegram/handler/message_handler"
+	"Yulia-Lingo/internal/irregular_verbs"
+	"Yulia-Lingo/internal/translate"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -16,10 +17,10 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) erro
 
 	switch messageFromUser {
 	case StartTelegramBotCommand:
-		return messageHandler.HandleStartButtonClick(bot, botUpdate, chatID)
+		return HandleStartButtonClick(bot, botUpdate, chatID)
 	case IrregularVerbsCommand:
-		return messageHandler.HandleIrregularVerbsButtonClick(bot, chatID)
+		return irregular_verbs.HandleIrregularVerbsButtonClick(bot, chatID)
 	default:
-		return messageHandler.HandleDefaultCaseUserMessage(bot, messageFromUser, chatID)
+		return translate.HandleDefaultCaseUserMessage(bot, messageFromUser, chatID)
 	}
 }

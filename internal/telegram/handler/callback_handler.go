@@ -1,7 +1,7 @@
 package handler
 
 import (
-	callbackHandler "Yulia-Lingo/internal/telegram/handler/callback_handler"
+	callbackHandler "Yulia-Lingo/internal/irregular_verbs"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"strings"
 )
