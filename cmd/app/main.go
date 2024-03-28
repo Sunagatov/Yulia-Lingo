@@ -3,6 +3,7 @@ package main
 import (
 	dbmanager "Yulia-Lingo/internal/database"
 	irregularVerbsManager "Yulia-Lingo/internal/irregular_verbs"
+	"Yulia-Lingo/internal/my_word_list"
 	"Yulia-Lingo/internal/telegram/bot_manager"
 	"Yulia-Lingo/internal/telegram/handler"
 	_ "github.com/lib/pq"
@@ -22,6 +23,11 @@ func main() {
 	err = irregularVerbsManager.InitIrregularVerbsTable()
 	if err != nil {
 		log.Fatalf("Failed to initialize irregular verbs table: %v", err)
+	}
+
+	err = my_word_list.InitMyWordsListTables()
+	if err != nil {
+		log.Fatalf("Failed to initialize my word list tables: %v", err)
 	}
 
 	bot, err := bot_manager.CreateTelegramBot()
