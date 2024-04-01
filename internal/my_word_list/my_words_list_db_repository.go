@@ -37,7 +37,7 @@ const (
 	InsertWordsTableSqlQuery = `
        INSERT INTO words (word_id, word, language_code, partOfSpeech)
        VALUES (1, 'get', 'en', 'Verb'),
-             (2, 'have', 'en', 'Noun'),
+             (2, 'have', 'en', 'Verb'),
              (3, 'house', 'en', 'Noun'),
              (4, 'car', 'en', 'Noun'),
              (5, 'computer', 'en', 'Noun'),
@@ -82,6 +82,7 @@ const (
        FROM Words w1
        INNER JOIN Translations t ON w1.word_id = t.source_word_id
        INNER JOIN Words w2 ON t.target_word_id = w2.word_id
+       WHERE w1.partOfSpeech = $1
 `
 )
 
@@ -98,14 +99,12 @@ func GetEnglishWordsWithRussianTranslations(offset, limit int, partOfSpeech stri
 		return nil, fmt.Errorf("failed to connect to the postgres database: %v", err)
 	}
 	log.Println("Getting English words with Russian translations from the database...")
-	wordsWithTranslationsRows, err := db.Query(GetAllEnglishWordsWithRussianTranslationsSqlQuery)
+	wordsWithTranslationsRows, err := db.Query(GetAllEnglishWordsWithRussianTranslationsSqlQuery, partOfSpeech)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute the database GetAllEnglishWordsWithRussianTranslationsSqlQuery: %v", err)
 	}
 	defer wordsWithTranslationsRows.Close() // Close the rows after iterating
 	log.Println("English words with Russian translations from the database were retrieved successfully...")
-
-	var wordsWithTranslations []WordTranslationEntity
 
 	// Map to store translations for each english word
 	englishWordTranslations := make(map[string][]string)
@@ -113,8 +112,8 @@ func GetEnglishWordsWithRussianTranslations(offset, limit int, partOfSpeech stri
 	for wordsWithTranslationsRows.Next() {
 		var englishWord string
 		var russianTranslation string
-		var partOfSpeech string
-		err := wordsWithTranslationsRows.Scan(&englishWord, &russianTranslation, &partOfSpeech)
+		var partOfSpeech2 string
+		err := wordsWithTranslationsRows.Scan(&englishWord, &russianTranslation, &partOfSpeech2)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan the row: %v", err)
 		}
@@ -134,6 +133,7 @@ func GetEnglishWordsWithRussianTranslations(offset, limit int, partOfSpeech stri
 	}
 
 	// Build the final WordTranslationEntity objects
+	var wordsWithTranslations []WordTranslationEntity
 	for englishWord, translations := range englishWordTranslations {
 		wordTranslation := WordTranslationEntity{
 			EnglishWord:  englishWord,
