@@ -8,15 +8,6 @@ import (
 )
 
 const (
-	GetAllEnglishWordsWithRussianTranslationsSqlQuery = `
-       SELECT w1.word AS source_word, w2.word AS target_word, 
-             w1.partOfSpeech
-       FROM Words w1
-       INNER JOIN Translations t ON w1.word_id = t.source_word_id
-       INNER JOIN Words w2 ON t.target_word_id = w2.word_id
-       WHERE w1.language_code = 'ru'  -- Use language_code for filtering
-         AND w1.partOfSpeech = 'Verb';
-`
 	DropLanguageIso639CodeTableSqlQuery = "DROP TYPE IF EXISTS language_iso_639_code"
 	DropWordCategoriesTableSqlQuery     = "DROP TYPE IF EXISTS word_categories"
 	DropPartsOfSpeechTableSqlQuery      = "DROP TYPE IF EXISTS part_of_speech"
@@ -46,23 +37,51 @@ const (
 	InsertWordsTableSqlQuery = `
        INSERT INTO words (word_id, word, language_code, partOfSpeech)
        VALUES (1, 'get', 'en', 'Verb'),
-             (2, 'apple', 'en', 'Verb'),
-             (3, 'house', 'en', 'Verb'),
-             (4, 'car', 'en', 'Verb'),
-             (5, 'computer', 'en', 'Verb'),
-             (6, 'получать', 'ru', 'Verb'),
+             (2, 'have', 'en', 'Noun'),
+             (3, 'house', 'en', 'Noun'),
+             (4, 'car', 'en', 'Noun'),
+             (5, 'computer', 'en', 'Noun'),
+             (6, 'apple', 'en', 'Verb'),
              (7, 'попасть', 'ru', 'Verb'),
              (8, 'добираться', 'ru', 'Verb'),
-             (9, 'приплод', 'ru', 'Verb'),
-             (10, 'потомство', 'ru', 'Verb');
+             (9, 'становиться', 'ru', 'Verb'),
+             (10, 'иметь', 'ru', 'Verb'),
+             (11, 'приобретать', 'ru', 'Verb'),
+             (12, 'иметь', 'ru', 'Verb'),
+             (13, 'обладать', 'ru', 'Verb'),
+             (14, 'получать', 'ru', 'Verb'),
+             (15, 'содержать', 'ru', 'Verb'),
+             (16, 'испытывать', 'ru', 'Verb'),
+             (17, 'яблоко', 'ru', 'Noun'),
+             (18, 'дом', 'ru', 'Noun'),
+             (19, 'машина', 'ru', 'Noun'),
+             (20, 'компьютер', 'ru', 'Noun');
 `
 	InsertTranslationsTableSqlQuery = `
        INSERT INTO translations (translation_id, source_word_id, target_word_id)
-       VALUES (1, 1, 6),
+       VALUES (1, 1, 10),
              (2, 1, 7),
              (3, 1, 8),
-             (4, 1, 7),
-             (5, 1, 8);
+             (4, 1, 9),
+             (5, 1, 11),
+             (6, 2, 12),
+             (7, 2, 11),
+             (8, 2, 13),
+             (9, 2, 14),
+             (10, 2, 15),
+             (11, 2, 16), 
+             (12, 2, 17),
+             (13, 3, 18),
+             (14, 4, 19),
+             (15, 5, 20);
+`
+	GetAllEnglishWordsWithRussianTranslationsSqlQuery = `
+       SELECT w1.word AS source_word, 
+              w2.word AS target_word,  
+              w1.partOfSpeech
+       FROM Words w1
+       INNER JOIN Translations t ON w1.word_id = t.source_word_id
+       INNER JOIN Words w2 ON t.target_word_id = w2.word_id
 `
 )
 
@@ -72,20 +91,24 @@ type WordTranslationEntity struct {
 	PartOfSpeech string   `json:"part_of_speech"`
 }
 
-func GetEnglishWordsWithRussianTranslations(offset, limit int) ([]WordTranslationEntity, error) {
+func GetEnglishWordsWithRussianTranslations(offset, limit int, partOfSpeech string) ([]WordTranslationEntity, error) {
 	log.Println("Connecting to database table...")
 	db, err := database.GetPostgresClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the postgres database: %v", err)
 	}
-
-	wordsWithTranslationsRows, err := db.Query(GetAllEnglishWordsWithRussianTranslationsSqlQuery, limit, offset)
+	log.Println("Getting English words with Russian translations from the database...")
+	wordsWithTranslationsRows, err := db.Query(GetAllEnglishWordsWithRussianTranslationsSqlQuery)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute the database GetAllEnglishWordsWithRussianTranslationsSqlQuery: %v", err)
 	}
-	defer wordsWithTranslationsRows.Close()
+	defer wordsWithTranslationsRows.Close() // Close the rows after iterating
+	log.Println("English words with Russian translations from the database were retrieved successfully...")
 
 	var wordsWithTranslations []WordTranslationEntity
+
+	// Map to store translations for each english word
+	englishWordTranslations := make(map[string][]string)
 
 	for wordsWithTranslationsRows.Next() {
 		var englishWord string
@@ -96,18 +119,28 @@ func GetEnglishWordsWithRussianTranslations(offset, limit int) ([]WordTranslatio
 			return nil, fmt.Errorf("failed to scan the row: %v", err)
 		}
 
-		// Create a new WordTranslationEntity for each row
-		wordTranslation := WordTranslationEntity{
-			EnglishWord:  englishWord,
-			Translations: []string{russianTranslation}, // Start with the current translation
-			PartOfSpeech: partOfSpeech,
+		// Update the map with translations for the current englishWord
+		translations, ok := englishWordTranslations[englishWord]
+		if !ok {
+			translations = []string{} // Initialize an empty slice for the first occurrence
 		}
-
-		wordsWithTranslations = append(wordsWithTranslations, wordTranslation)
+		translations = append(translations, russianTranslation)
+		englishWordTranslations[englishWord] = translations
 	}
 
+	// Check for errors after iterating through rows
 	if wordsWithTranslationsRows.Err() != nil {
 		return nil, fmt.Errorf("failed to iterate over wordsWithTranslationsRows: %v", err)
+	}
+
+	// Build the final WordTranslationEntity objects
+	for englishWord, translations := range englishWordTranslations {
+		wordTranslation := WordTranslationEntity{
+			EnglishWord:  englishWord,
+			Translations: translations,
+			PartOfSpeech: partOfSpeech,
+		}
+		wordsWithTranslations = append(wordsWithTranslations, wordTranslation)
 	}
 
 	return wordsWithTranslations, nil

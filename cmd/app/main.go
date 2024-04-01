@@ -48,7 +48,12 @@ func getEnglishWordsWithRussianTranslations(writer http.ResponseWriter, request 
 		return
 	}
 
-	wordsWithTranslations, err := my_word_list.GetEnglishWordsWithRussianTranslations(offset, limit)
+	partOfSpeech := request.URL.Query().Get("partOfSpeech")
+	if err != nil {
+		http.Error(writer, "Invalid partOfSpeech", http.StatusBadRequest)
+	}
+
+	wordsWithTranslations, err := my_word_list.GetEnglishWordsWithRussianTranslations(offset, limit, partOfSpeech)
 	if err != nil {
 		http.Error(writer, fmt.Sprintf("Failed to fetch words: %v", err), http.StatusInternalServerError)
 		return
