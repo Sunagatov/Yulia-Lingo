@@ -8,57 +8,110 @@ import (
 )
 
 const (
-	DropLanguageIso639CodeTableSqlQuery = "DROP TABLE IF EXISTS language_iso_639_code"
-	DropWordCategoriesTableSqlQuery     = "DROP TABLE IF EXISTS word_categories"
-	DropPartsOfSpeechTableSqlQuery      = "DROP TABLE IF EXISTS parts_of_speech"
+	GetAllEnglishWordsWithRussianTranslationsSqlQuery = `
+       SELECT w1.word AS source_word, w2.word AS target_word, 
+             w1.partOfSpeech
+       FROM Words w1
+       INNER JOIN Translations t ON w1.word_id = t.source_word_id
+       INNER JOIN Words w2 ON t.target_word_id = w2.word_id
+       WHERE w1.language_code = 'ru'  -- Use language_code for filtering
+         AND w1.partOfSpeech = 'Verb';
+`
+	DropLanguageIso639CodeTableSqlQuery = "DROP TYPE IF EXISTS language_iso_639_code"
+	DropWordCategoriesTableSqlQuery     = "DROP TYPE IF EXISTS word_categories"
+	DropPartsOfSpeechTableSqlQuery      = "DROP TYPE IF EXISTS part_of_speech"
 	DropWordsTableSqlQuery              = "DROP TABLE IF EXISTS words"
 	DropTranslationsTableSqlQuery       = "DROP TABLE IF EXISTS translations"
 
 	CreateLanguageIso639CodeTableSqlQuery = "CREATE TYPE language_iso_639_code AS ENUM ('ru', 'en', 'es')"
-	CreateWordCategoriesTableSqlQuery     = "CREATE TYPE word_categories AS ENUM ('category_part_of_speech_verb', 'category_capital_letter')"
-	CreatePartsOfSpeechTableSqlQuery      = "CREATE TYPE parts_of_speech AS ENUM ('Noun', 'Verb', 'Adjective', 'Adverb', 'Pronoun', 'Preposition', 'Conjunction','Interjection' )"
+	CreatePartsOfSpeechTableSqlQuery      = "CREATE TYPE part_of_speech AS ENUM ('Noun', 'Verb', 'Adjective', 'Adverb', 'Pronoun', 'Preposition', 'Conjunction','Interjection' )"
 	CreateWordsTableSqlQuery              = `
-		CREATE TABLE Words (
-		    word_id               INT PRIMARY KEY,    
-		    word                  VARCHAR(100) NOT NULL,    
-		    language_iso_639_code INT          NOT NULL,    
-		    CONSTRAINT word_lowercase_constraint CHECK (word = LOWER(word))
-		)
-	`
+       CREATE TABLE words (
+          word_id               SERIAL PRIMARY KEY,    
+          word                  VARCHAR(100) NOT NULL,    
+          language_code language_iso_639_code NOT NULL,
+          partOfSpeech part_of_speech NOT NULL,
+          CONSTRAINT word_lowercase_constraint CHECK (word = LOWER(word))
+       );
+    `
 	CreateTranslationsTableSqlQuery = `
-		CREATE TABLE translations
-		(
-			translation_id      INT PRIMARY KEY,
-			word_id             INT NOT NULL,
-			word_translation_id INT NOT NULL,
-			part_of_speech      parts_of_speech,
-			CONSTRAINT unique_translation_combination UNIQUE (word_id, word_translation_id, part_of_speech),
-			FOREIGN KEY (word_id) REFERENCES words(word_id),
-			FOREIGN KEY (word_translation_id) REFERENCES words(word_id)
-		);
-	`
+    CREATE TABLE translations (
+      translation_id SERIAL PRIMARY KEY,
+      source_word_id INT NOT NULL,
+      target_word_id INT NOT NULL,
+      FOREIGN KEY (source_word_id) REFERENCES words(word_id),
+      FOREIGN KEY (target_word_id) REFERENCES words(word_id)
+    );
+    `
 	InsertWordsTableSqlQuery = `
-		INSERT INTO words (word_id, word, language_iso_639_code)
-		VALUES (1, 'get', 'en'),
-			   (2, 'apple', 'en'),
-			   (3, 'house', 'en'),
-			   (4, 'car', 'en'),
-			   (5, 'computer', 'en'),
-			   (6, 'получать', 'ru'),
-			   (7, 'попасть', 'ru'),
-			   (8, 'добираться', 'ru'),
-			   (9, 'приплод', 'ru'),
-			   (10, 'потомство', 'ru');
+       INSERT INTO words (word_id, word, language_code, partOfSpeech)
+       VALUES (1, 'get', 'en', 'Verb'),
+             (2, 'apple', 'en', 'Verb'),
+             (3, 'house', 'en', 'Verb'),
+             (4, 'car', 'en', 'Verb'),
+             (5, 'computer', 'en', 'Verb'),
+             (6, 'получать', 'ru', 'Verb'),
+             (7, 'попасть', 'ru', 'Verb'),
+             (8, 'добираться', 'ru', 'Verb'),
+             (9, 'приплод', 'ru', 'Verb'),
+             (10, 'потомство', 'ru', 'Verb');
 `
 	InsertTranslationsTableSqlQuery = `
-		INSERT INTO translations (translation_id, word_id, word_translation_id, part_of_speech)
-		VALUES (1, 1, 6, 'Verb'),
-			   (2, 1, 7, 'Verb'),
-			   (3, 1, 8, 'Verb'),
-			   (4, 1, 7, 'Noun'),
-			   (5, 1, 8, 'Noun');
+       INSERT INTO translations (translation_id, source_word_id, target_word_id)
+       VALUES (1, 1, 6),
+             (2, 1, 7),
+             (3, 1, 8),
+             (4, 1, 7),
+             (5, 1, 8);
 `
 )
+
+type WordTranslationEntity struct {
+	EnglishWord  string   `json:"english_word"`
+	Translations []string `json:"translations"`
+	PartOfSpeech string   `json:"part_of_speech"`
+}
+
+func GetEnglishWordsWithRussianTranslations(offset, limit int) ([]WordTranslationEntity, error) {
+	log.Println("Connecting to database table...")
+	db, err := database.GetPostgresClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to the postgres database: %v", err)
+	}
+
+	wordsWithTranslationsRows, err := db.Query(GetAllEnglishWordsWithRussianTranslationsSqlQuery, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute the database GetAllEnglishWordsWithRussianTranslationsSqlQuery: %v", err)
+	}
+	defer wordsWithTranslationsRows.Close()
+
+	var wordsWithTranslations []WordTranslationEntity
+
+	for wordsWithTranslationsRows.Next() {
+		var englishWord string
+		var russianTranslation string
+		var partOfSpeech string
+		err := wordsWithTranslationsRows.Scan(&englishWord, &russianTranslation, &partOfSpeech)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan the row: %v", err)
+		}
+
+		// Create a new WordTranslationEntity for each row
+		wordTranslation := WordTranslationEntity{
+			EnglishWord:  englishWord,
+			Translations: []string{russianTranslation}, // Start with the current translation
+			PartOfSpeech: partOfSpeech,
+		}
+
+		wordsWithTranslations = append(wordsWithTranslations, wordTranslation)
+	}
+
+	if wordsWithTranslationsRows.Err() != nil {
+		return nil, fmt.Errorf("failed to iterate over wordsWithTranslationsRows: %v", err)
+	}
+
+	return wordsWithTranslations, nil
+}
 
 func InitMyWordsListTables() error {
 	log.Println("Connecting to database table...")
@@ -76,8 +129,82 @@ func InitMyWordsListTables() error {
 	}
 	err = insertTestDataIntoDatabaseTables(db)
 	if err != nil {
-		return fmt.Errorf("failed to create new database tables: %v", err)
+		return fmt.Errorf("failed to insert new test data into the database: %v", err)
 	}
+	return nil
+}
+
+func dropDatabaseTables(db *sql.DB) error {
+	log.Println("Dropping existing tables was started...")
+
+	log.Println("Dropping existing table 'translations'...")
+	_, err := db.Exec(DropTranslationsTableSqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to drop existing database table 'translations': %v", err)
+	}
+	log.Println("Database table 'translations' was dropped successfully.")
+
+	log.Println("Dropping existing table 'words'...")
+	_, err = db.Exec(DropWordsTableSqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to drop existing database table 'words': %v", err)
+	}
+	log.Println("Database table 'words' was dropped successfully.")
+
+	log.Println("Dropping existing table 'language_iso_639_code'...")
+	_, err = db.Exec(DropLanguageIso639CodeTableSqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to drop existing database table 'language_iso_639_code': %v", err)
+	}
+	log.Println("Database table 'language_iso_639_code' was dropped successfully.")
+
+	log.Println("Dropping existing table 'word_categories'...")
+	_, err = db.Exec(DropWordCategoriesTableSqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to drop existing database table 'word_categories': %v", err)
+	}
+	log.Println("Database table 'word_categories' was dropped successfully.")
+
+	log.Println("Dropping existing table 'part_of_speech'...")
+	_, err = db.Exec(DropPartsOfSpeechTableSqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to drop existing database table 'part_of_speech': %v", err)
+	}
+	log.Println("Database table 'part_of_speech' was dropped successfully.")
+
+	return nil
+}
+
+func createDatabaseTables(db *sql.DB) error {
+	log.Println("Creating new database tables was started...")
+
+	log.Println("Creating a new table 'language_iso_639_code'...")
+	_, err := db.Exec(CreateLanguageIso639CodeTableSqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to create a new database table 'language_iso_639_code': %v", err)
+	}
+	log.Println("Database table 'language_iso_639_code' was created successfully.")
+
+	log.Println("Creating a new table 'part_of_speech'...")
+	_, err = db.Exec(CreatePartsOfSpeechTableSqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to create a new database table 'part_of_speech': %v", err)
+	}
+	log.Println("Database table 'part_of_speech' was created successfully.")
+
+	log.Println("Creating a new table 'words'...")
+	_, err = db.Exec(CreateWordsTableSqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to create a new database table 'words': %v", err)
+	}
+	log.Println("Database table 'words' was created successfully.")
+
+	log.Println("Creating a new table 'translations'...")
+	_, err = db.Exec(CreateTranslationsTableSqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to create a new database table 'translations': %v", err)
+	}
+	log.Println("Database table 'translations' was created successfully.")
 	return nil
 }
 
@@ -99,85 +226,5 @@ func insertTestDataIntoDatabaseTables(db *sql.DB) error {
 	log.Println("New test data was inserted into table 'translations' successfully.")
 
 	log.Println("Inserting new test data into the existed database tables was finished successfully.")
-	return nil
-}
-
-func createDatabaseTables(db *sql.DB) error {
-	log.Println("Creating new database tables was started...")
-
-	log.Println("Creating a new table 'language_iso_639_code'...")
-	_, err := db.Exec(CreateLanguageIso639CodeTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to create a new database table 'language_iso_639_code': %v", err)
-	}
-	log.Println("Database table 'language_iso_639_code' was created successfully.")
-
-	log.Println("Creating a new table 'word_categories'...")
-	_, err = db.Exec(CreateWordCategoriesTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to create a new database table 'word_categories': %v", err)
-	}
-	log.Println("Database table 'word_categories' was created successfully.")
-
-	log.Println("Creating a new table 'parts_of_speech'...")
-	_, err = db.Exec(CreatePartsOfSpeechTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to create a new database table 'parts_of_speech': %v", err)
-	}
-	log.Println("Database table 'parts_of_speech' was created successfully.")
-
-	log.Println("Creating a new table 'parts_of_speech'...")
-	_, err = db.Exec(CreateWordsTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to create a new database table 'parts_of_speech': %v", err)
-	}
-	log.Println("Database table 'parts_of_speech' was created successfully.")
-
-	log.Println("Creating a new table 'translations'...")
-	_, err = db.Exec(CreateTranslationsTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to create a new database table 'translations': %v", err)
-	}
-	log.Println("Database table 'translations' was created successfully.")
-	return nil
-}
-
-func dropDatabaseTables(db *sql.DB) error {
-	log.Println("Dropping existing tables was started...")
-
-	log.Println("Dropping existing table 'language_iso_639_code'...")
-	_, err := db.Exec(DropLanguageIso639CodeTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to drop existing database table 'language_iso_639_code': %v", err)
-	}
-	log.Println("Database table 'language_iso_639_code' was dropped successfully.")
-
-	log.Println("Dropping existing table 'word_categories'...")
-	_, err = db.Exec(DropWordCategoriesTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to drop existing database table 'word_categories': %v", err)
-	}
-	log.Println("Database table 'word_categories' was dropped successfully.")
-
-	log.Println("Dropping existing table 'parts_of_speech'...")
-	_, err = db.Exec(DropPartsOfSpeechTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to drop existing database table 'parts_of_speech': %v", err)
-	}
-	log.Println("Database table 'parts_of_speech' was dropped successfully.")
-
-	log.Println("Dropping existing table 'words'...")
-	_, err = db.Exec(DropWordsTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to drop existing database table 'words': %v", err)
-	}
-	log.Println("Database table 'words' was dropped successfully.")
-
-	log.Println("Dropping existing table 'translations'...")
-	_, err = db.Exec(DropTranslationsTableSqlQuery)
-	if err != nil {
-		return fmt.Errorf("failed to drop existing database table 'translations': %v", err)
-	}
-	log.Println("Database table 'translations' was dropped successfully.")
 	return nil
 }
