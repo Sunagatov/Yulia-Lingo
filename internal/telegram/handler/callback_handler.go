@@ -1,7 +1,8 @@
 package handler
 
 import (
-	callbackHandler "Yulia-Lingo/internal/irregular_verbs"
+	irregularVerbsCallbackHandler "Yulia-Lingo/internal/irregular_verbs"
+	myWordListCallbackHandler "Yulia-Lingo/internal/my_word_list"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"strings"
 )
@@ -12,7 +13,9 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) error 
 
 	switch {
 	case strings.Contains(callbackMessageFromUser, "IrregularVerbs"):
-		return callbackHandler.HandleIrregularVerbListCallback(callbackQuery, bot)
+		return irregularVerbsCallbackHandler.HandleIrregularVerbListCallback(callbackQuery, bot)
+	case strings.Contains(callbackMessageFromUser, "MyWordList"):
+		return myWordListCallbackHandler.HandleIrregularVerbListCallback(callbackQuery, bot)
 	default:
 		return nil
 	}

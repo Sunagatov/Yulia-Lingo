@@ -23,7 +23,7 @@ func HandleMessageFromUser(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) erro
 	case IrregularVerbsCommand:
 		return irregular_verbs.HandleIrregularVerbsButtonClick(bot, chatID)
 	case MyWordListCommand:
-		return my_word_list.HandleMyWordButtonClick(bot, chatID)
+		return my_word_list.HandleMyWordListButtonClick(bot, chatID)
 	default:
 		return translate.HandleDefaultCaseUserMessage(bot, messageFromUser, chatID)
 	}

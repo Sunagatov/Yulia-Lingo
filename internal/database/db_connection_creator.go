@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
+	"os"
 )
 
 var (
@@ -12,16 +13,16 @@ var (
 )
 
 func CreateDatabaseConnection() error {
-	//host := os.Getenv("POSTGRESQL_HOST")
-	//port := os.Getenv("POSTGRESQL_PORT")
-	//user := os.Getenv("POSTGRESQL_USER")
-	//password := os.Getenv("POSTGRESQL_PASSWORD")
-	//dbname := os.Getenv("POSTGRESQL_DATABASE_NAME")
-	host := "localhost"
-	port := "5432"
-	user := "postgres"
-	password := "postgres"
-	dbname := "testdb"
+	host := os.Getenv("POSTGRESQL_HOST")
+	port := os.Getenv("POSTGRESQL_PORT")
+	user := os.Getenv("POSTGRESQL_USER")
+	password := os.Getenv("POSTGRESQL_PASSWORD")
+	dbname := os.Getenv("POSTGRESQL_DATABASE_NAME")
+	//host := "localhost"
+	//port := "5432"
+	//user := "postgres"
+	//password := "postgres"
+	//dbname := "testdb"
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 

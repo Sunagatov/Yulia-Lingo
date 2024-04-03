@@ -1,19 +1,16 @@
-package irregular_verbs
+package my_word_list
 
 import (
 	utilService "Yulia-Lingo/internal/util_services"
-
 	"encoding/json"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-const IrregularVerbsCountPerPage = 5
-
 type KeyboardVerbValue struct {
-	Request string
-	Page    int
-	Latter  string
+	Req          string
+	Page         int
+	PartOfSpeech string
 }
 
 func KeyboardVerbValueFromJSON(jsonStr string) (KeyboardVerbValue, error) {
@@ -25,6 +22,8 @@ func KeyboardVerbValueFromJSON(jsonStr string) (KeyboardVerbValue, error) {
 	return kv, nil
 }
 
+const MyWordsListCountPerPage = 5
+
 func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI) error {
 	callbackData := callbackQuery.Data
 	callbackChatId := callbackQuery.Message.Chat.ID
@@ -33,25 +32,37 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 	if err != nil {
 		return fmt.Errorf("failed to map keyboardVerbValue: %v", err)
 	}
-	selectedLetter := keyboardVerbValue.Latter
+
+	partsOfSpeech := map[string]string{
+		"N":      "Noun",
+		"V":      "Verb",
+		"Adj":    "Adjective",
+		"Adv":    "Adverb",
+		"Pro":    "Pronoun",
+		"Prep":   "Preposition",
+		"Conj":   "Conjunction",
+		"Interj": "Interjection",
+	}
+
+	partOfSpeech := partsOfSpeech[keyboardVerbValue.PartOfSpeech]
 	currentPageNumber := keyboardVerbValue.Page
 
-	irregularVerbsPageAsText, err := GetIrregularVerbsPageAsText(currentPageNumber, selectedLetter)
+	myWordListPageAsText, err := GetMyWordListPageAsText(currentPageNumber, partOfSpeech)
 	if err != nil {
 		return fmt.Errorf("failed to get irregular irregularVerbs page as text: %v", err)
 	}
 
 	var responseText string
-	if irregularVerbsPageAsText != "" {
+	if myWordListPageAsText != "" {
 		responseText = utilService.GetMessageDelimiter() + "\n" +
-			fmt.Sprintf("*Список неправильных глаголов на букву '%s':*\n\n", selectedLetter) +
-			irregularVerbsPageAsText
+			fmt.Sprintf("*Список глаголов:*\n\n") +
+			myWordListPageAsText
 	} else {
 		responseText = utilService.GetMessageDelimiter() + "\n" +
-			fmt.Sprintf("*Список неправильных глаголов на букву '%s' пуст*", selectedLetter)
+			fmt.Sprintf("*Список глаголов пуст*")
 	}
 
-	keyboard, err := CreateInlineKeyboard(keyboardVerbValue.Page, selectedLetter)
+	keyboard, err := CreateInlineKeyboard(keyboardVerbValue.Page, partOfSpeech)
 	if err != nil {
 		return fmt.Errorf("failed to inline keyboard: %v", err)
 	}
@@ -69,46 +80,46 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 	return nil
 }
 
-func GetIrregularVerbsPageAsText(currentPageNumber int, selectedLetter string) (string, error) {
-	offset := currentPageNumber * IrregularVerbsCountPerPage
-	irregularVerbsListPage, err := GetIrregularVerbsListPage(offset, IrregularVerbsCountPerPage, selectedLetter)
+func GetMyWordListPageAsText(currentPageNumber int, partOfSpeech string) (string, error) {
+	offset := currentPageNumber * MyWordsListCountPerPage
+	myWordListPage, err := GetEnglishWordsWithRussianTranslations(offset, MyWordsListCountPerPage, partOfSpeech)
 	if err != nil {
 		return "", fmt.Errorf("failed to get irregularVerbs page from database: %v", err)
 	}
-	if len(irregularVerbsListPage) == 0 {
+	if len(myWordListPage) == 0 {
 		return "", nil
 	}
 	var irregularVerbsPageAsText string
-	for _, verb := range irregularVerbsListPage {
-		irregularVerbsPageAsText += fmt.Sprintf("*%s*:\n*[*%s / %s / %s*]*\n\n", verb.Original, verb.Verb, verb.Past, verb.PastParticiple)
+	for _, word := range myWordListPage {
+		irregularVerbsPageAsText += fmt.Sprintf("*%s*:\n*[*%s*]*\n\n", word.EnglishWord, word.Translations)
 	}
 	return irregularVerbsPageAsText, nil
 }
 
-func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyboardButton, error) {
-	totalVerbs, err := GetTotalIrregularVerbsCount(letter)
+func CreateInlineKeyboard(currentPage int, partOfSpeech string) ([]tgbotapi.InlineKeyboardButton, error) {
+	totalVerbs, err := GetTotalMyWordsListCount(partOfSpeech)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get total irregular verbs count: %v", err)
+		return nil, fmt.Errorf("failed to get total my word list count: %v", err)
 	}
-	totalPages := totalVerbs / IrregularVerbsCountPerPage
+	totalPages := totalVerbs / MyWordsListCountPerPage
 
 	var keyboard []tgbotapi.InlineKeyboardButton
 	if currentPage > 0 {
 		jsonPrev, err := utilService.ConvertToJson(KeyboardVerbValue{
-			Request: "IrregularVerbs",
-			Page:    currentPage - 1,
-			Latter:  letter,
+			Req:          "MyWordList",
+			Page:         currentPage - 1,
+			PartOfSpeech: partOfSpeech,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create a json for the case (currentPage > 0): %v", err)
 		}
 		keyboard = append(keyboard, tgbotapi.NewInlineKeyboardButtonData("⬅️Назад", jsonPrev))
 	}
-	if currentPage < totalPages && totalVerbs > IrregularVerbsCountPerPage {
+	if currentPage < totalPages && totalVerbs > MyWordsListCountPerPage {
 		jsonNext, err := utilService.ConvertToJson(KeyboardVerbValue{
-			Request: "IrregularVerbs",
-			Page:    currentPage + 1,
-			Latter:  letter,
+			Req:          "IrregularVerbs",
+			Page:         currentPage + 1,
+			PartOfSpeech: partOfSpeech,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create a json for the case (currentPage < totalPages): %v", err)

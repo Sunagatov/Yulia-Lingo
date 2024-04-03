@@ -20,6 +20,7 @@ func HandleStartButtonClick(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update, cha
 		messageToUser.ParseMode = "Markdown"
 		messageToUser.ReplyMarkup = tgbotapi.NewReplyKeyboard(
 			tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton("🔺 Неправильные глаголы")),
+			tgbotapi.NewKeyboardButtonRow(tgbotapi.NewKeyboardButton("🔺 Мой список слов")),
 		)
 		_, errorMessage := bot.Send(&messageToUser)
 		if errorMessage != nil {

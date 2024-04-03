@@ -79,11 +79,12 @@ const (
        SELECT w1.word AS source_word, 
               w2.word AS target_word,  
               w1.partOfSpeech
-       FROM Words w1
+       FROM words w1
        INNER JOIN Translations t ON w1.word_id = t.source_word_id
        INNER JOIN Words w2 ON t.target_word_id = w2.word_id
        WHERE w1.partOfSpeech = $1
 `
+	GetTotalMyWordListCountSqlQuery = "SELECT COUNT(*) FROM words w WHERE w.partOfSpeech = $1"
 )
 
 type WordTranslationEntity struct {
@@ -144,6 +145,26 @@ func GetEnglishWordsWithRussianTranslations(offset, limit int, partOfSpeech stri
 	}
 
 	return wordsWithTranslations, nil
+}
+
+func GetTotalMyWordsListCount(partOfSpeech string) (int, error) {
+	db, err := database.GetPostgresClient()
+	if err != nil {
+		return -1, fmt.Errorf("failed to connect to the postgres database: %v", err)
+	}
+
+	preparedSqlStatement, err := db.Prepare(GetTotalMyWordListCountSqlQuery)
+	if err != nil {
+		return -1, fmt.Errorf("failed to prepare sql statement: %v", err)
+	}
+
+	var totalMyWordsLisCount int
+	err = preparedSqlStatement.QueryRow(partOfSpeech).Scan(&totalMyWordsLisCount)
+	if err != nil {
+		return -1, fmt.Errorf("failed to execute the sqlQuery for getting totalMyWordListCount from database: %v", err)
+	}
+	defer preparedSqlStatement.Close()
+	return totalMyWordsLisCount, nil
 }
 
 func InitMyWordsListTables() error {
