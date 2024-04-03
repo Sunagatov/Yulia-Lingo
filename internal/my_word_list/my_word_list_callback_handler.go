@@ -55,11 +55,11 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 	var responseText string
 	if myWordListPageAsText != "" {
 		responseText = utilService.GetMessageDelimiter() + "\n" +
-			fmt.Sprintf("*Список глаголов:*\n\n") +
+			fmt.Sprintf("*Список слов, относящихся к части речи '%s':*\n\n", partOfSpeech) +
 			myWordListPageAsText
 	} else {
 		responseText = utilService.GetMessageDelimiter() + "\n" +
-			fmt.Sprintf("*Список глаголов пуст*")
+			fmt.Sprintf("*Список слов, относящихся к части речи '%s' пуст*")
 	}
 
 	keyboard, err := CreateInlineKeyboard(keyboardVerbValue.Page, partOfSpeech)
@@ -117,7 +117,7 @@ func CreateInlineKeyboard(currentPage int, partOfSpeech string) ([]tgbotapi.Inli
 	}
 	if currentPage < totalPages && totalVerbs > MyWordsListCountPerPage {
 		jsonNext, err := utilService.ConvertToJson(KeyboardVerbValue{
-			Req:          "IrregularVerbs",
+			Req:          "MyWordList",
 			Page:         currentPage + 1,
 			PartOfSpeech: partOfSpeech,
 		})

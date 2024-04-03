@@ -30,7 +30,7 @@ func HandleDefaultCaseUserMessage(bot *tgbotapi.BotAPI, textFromUser string, cha
 	messageToUser.ParseMode = "Markdown"
 	messageToUser.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("💾Сохранить слово в словарь", "save_word_option"),
+			tgbotapi.NewInlineKeyboardButtonData("💾Добавить в свой список слов для изучения", "save_word_option"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("✅Пометить слово как выученное", "save_word_option"),
