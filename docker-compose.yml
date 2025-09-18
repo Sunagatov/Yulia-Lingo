@@ -1,20 +1,37 @@
-version: '3.9'
-
-networks:
-  yulia-lingo-network:
-    attachable: true
+version: '3.8'
 
 services:
-  yulia-lingo-backend:
-    container_name: yulia-lingo-backend
-    image: 'zufarexplainedit/yulia-lingo-backend:${DOCKER_IMAGE_TAG}'
-    env_file:
-      - .env
-    build:
-      context: .
-      dockerfile: Dockerfile
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: yulia_lingo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
     ports:
-      - "8443:8443"
-    networks:
-      - yulia-lingo-network
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
+  bot:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRESQL_HOST: postgres
+      POSTGRESQL_PORT: 5432
+      POSTGRESQL_USER: postgres
+      POSTGRESQL_PASSWORD: postgres123
+      POSTGRESQL_DATABASE_NAME: yulia_lingo
+      IRREGULAR_VERBS_FILE_PATH: ./resource/nepravilnye-glagoly-295.xlsx
+      LOG_LEVEL: info
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

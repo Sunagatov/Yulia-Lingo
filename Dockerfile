@@ -1,12 +1,18 @@
-FROM golang:1.21.3 as builder
+FROM golang:1.21.3-alpine AS builder
+
 WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
-ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-RUN go build -a -installsuffix cgo -o yulia-lingo-backend ./cmd/app
+RUN go build -o bot ./cmd/app
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
-WORKDIR /app
-COPY --from=builder /app/yulia-lingo-backend .
-EXPOSE 8443
-CMD ["./yulia-lingo-backend"]
+WORKDIR /root/
+
+COPY --from=builder /app/bot .
+COPY --from=builder /app/resource ./resource
+COPY --from=builder /app/.env .
+
+CMD ["./bot"]
