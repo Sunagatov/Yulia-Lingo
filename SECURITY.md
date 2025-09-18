@@ -2,124 +2,206 @@
 
 ## Supported Versions
 
-We actively maintain and provide security updates for the following versions:
+We actively support the following versions with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.x.x   | :white_check_mark: |
+| 2.0.x   | :white_check_mark: |
 | 1.x.x   | :x:                |
 
 ## Security Features
 
-This project implements multiple security measures:
+### 🛡️ Built-in Security Measures
 
-### Input Validation & Sanitization
-- All user inputs are validated using regex patterns
-- SQL injection prevention through parameterized queries
-- Log injection prevention with structured logging
-- Path traversal protection with allowlisting
+#### Input Validation & Sanitization
+- **All user inputs** are validated and sanitized before processing
+- **Length limits** on all text inputs to prevent buffer overflow attacks
+- **Character validation** to prevent injection attacks
+- **SQL injection prevention** through parameterized queries only
 
-### Network Security
-- SSRF protection with URL allowlisting for external APIs
-- HTTPS-only external communications
-- Secure HTTP client configuration with timeouts
+#### Database Security
+- **Parameterized queries** for all database operations
+- **Connection pooling** with proper resource management
+- **Database user isolation** with minimal required permissions
+- **Audit logging** for security monitoring
+- **Connection encryption** support (configurable SSL/TLS)
 
-### Data Protection
-- Environment-based configuration for sensitive data
-- No hardcoded credentials in source code
-- Secure database connection management
-- Proper resource cleanup and connection pooling
+#### Network Security
+- **HTTPS-only** external API calls
+- **Host allowlisting** for external services to prevent SSRF attacks
+- **Request timeout limits** to prevent resource exhaustion
+- **Rate limiting** through connection pooling
 
-### Application Security
-- Concurrency control to prevent resource exhaustion
-- Graceful error handling without information disclosure
-- Structured logging without sensitive data exposure
-- Dependency vulnerability scanning
+#### Application Security
+- **Structured logging** to prevent log injection attacks
+- **Resource limits** to prevent DoS attacks
+- **Graceful error handling** without information disclosure
+- **Secure configuration** management with environment variables
+- **Non-root container execution** in Docker deployments
 
-## Reporting a Vulnerability
+#### Container Security
+- **Multi-stage Docker builds** for minimal attack surface
+- **Read-only filesystem** in production containers
+- **Non-privileged user** execution (UID 65534)
+- **No shell access** in production images (scratch-based)
+- **Security scanning** friendly image structure
 
-We take security vulnerabilities seriously. If you discover a security vulnerability, please follow these steps:
+### 🔒 Configuration Security
 
-### 1. Do Not Create Public Issues
-Please do not create public GitHub issues for security vulnerabilities.
+#### Environment Variables
+```bash
+# Database Security
+DB_SSL_MODE=require                    # Enable SSL for database connections
+POSTGRESQL_PASSWORD=<strong-password>  # Use strong passwords
 
-### 2. Contact Us Privately
-Send an email to: **security@yulia-lingo.com** (or create a private issue if email is not available)
+# Application Security
+LOG_LEVEL=info                        # Avoid debug logs in production
+GRACEFUL_SHUTDOWN_TIME=30s           # Proper cleanup on shutdown
 
-Include the following information:
+# API Security
+TRANSLATE_API_KEY=<secure-key>       # Secure API keys
+```
+
+#### Docker Security
+```yaml
+# docker-compose.yml security settings
+security_opt:
+  - no-new-privileges:true
+read_only: true
+user: "65534:65534"
+```
+
+### 🚨 Security Best Practices
+
+#### Deployment Security
+1. **Use strong passwords** for all database connections
+2. **Enable SSL/TLS** for database connections in production
+3. **Regularly update** container images and dependencies
+4. **Monitor logs** for suspicious activities
+5. **Implement network segmentation** using Docker networks
+6. **Use secrets management** for sensitive configuration
+
+#### Operational Security
+1. **Regular security updates** - Keep dependencies up to date
+2. **Log monitoring** - Monitor application logs for security events
+3. **Access control** - Limit access to production systems
+4. **Backup security** - Encrypt and secure database backups
+5. **Incident response** - Have a plan for security incidents
+
+#### Development Security
+1. **Code review** - All changes should be reviewed
+2. **Dependency scanning** - Regularly scan for vulnerable dependencies
+3. **Static analysis** - Use security-focused static analysis tools
+4. **Secrets management** - Never commit secrets to version control
+
+### 🔍 Security Monitoring
+
+#### Audit Logging
+The application includes comprehensive audit logging:
+- Database operations
+- User interactions
+- API calls
+- Error conditions
+- Security events
+
+#### Health Checks
+Built-in health checks monitor:
+- Database connectivity
+- Application responsiveness
+- Resource utilization
+- Security status
+
+#### Metrics & Monitoring
+Recommended monitoring:
+- Failed authentication attempts
+- Unusual traffic patterns
+- Database connection issues
+- Error rates and types
+- Resource consumption
+
+### 🚨 Reporting Security Vulnerabilities
+
+We take security seriously. If you discover a security vulnerability, please follow these steps:
+
+#### Reporting Process
+1. **DO NOT** create a public GitHub issue for security vulnerabilities
+2. **Email** security reports to: [security@example.com]
+3. **Include** detailed information about the vulnerability
+4. **Provide** steps to reproduce the issue if possible
+5. **Wait** for acknowledgment before public disclosure
+
+#### What to Include
 - Description of the vulnerability
-- Steps to reproduce the issue
+- Steps to reproduce
 - Potential impact assessment
-- Any suggested fixes (if available)
+- Suggested fix (if known)
+- Your contact information
 
-### 3. Response Timeline
-- **Initial Response**: Within 48 hours
-- **Vulnerability Assessment**: Within 7 days
-- **Fix Development**: Within 30 days (depending on severity)
-- **Public Disclosure**: After fix is deployed and users have time to update
+#### Response Timeline
+- **24 hours**: Initial acknowledgment
+- **72 hours**: Initial assessment and triage
+- **7 days**: Detailed response with timeline
+- **30 days**: Target resolution for critical issues
 
-### 4. Severity Levels
+### 🛠️ Security Development Lifecycle
 
-We classify vulnerabilities using the following severity levels:
+#### Code Security
+- All code follows secure coding practices
+- Input validation at multiple layers
+- Proper error handling without information disclosure
+- Resource management and cleanup
+- Secure defaults in configuration
 
-#### Critical
-- Remote code execution
-- SQL injection leading to data breach
-- Authentication bypass
+#### Testing Security
+- Security-focused unit tests
+- Integration tests for security features
+- Dependency vulnerability scanning
+- Container security scanning
+- Static code analysis
 
-#### High
-- Cross-site scripting (XSS)
-- Privilege escalation
-- Sensitive data exposure
+#### Deployment Security
+- Secure container images
+- Network isolation
+- Resource limits
+- Health monitoring
+- Incident response procedures
 
-#### Medium
-- Information disclosure
-- Denial of service
-- CSRF vulnerabilities
+### 📋 Security Checklist
 
-#### Low
-- Minor information leaks
-- Non-exploitable security misconfigurations
+#### Before Deployment
+- [ ] All dependencies updated to latest secure versions
+- [ ] Environment variables properly configured
+- [ ] SSL/TLS enabled for database connections
+- [ ] Strong passwords configured
+- [ ] Container security settings applied
+- [ ] Network isolation configured
+- [ ] Monitoring and logging enabled
+- [ ] Backup procedures tested
+- [ ] Incident response plan ready
 
-## Security Best Practices for Users
+#### Regular Maintenance
+- [ ] Monthly dependency updates
+- [ ] Quarterly security reviews
+- [ ] Log analysis for security events
+- [ ] Performance and security monitoring
+- [ ] Backup integrity verification
+- [ ] Access control review
+- [ ] Documentation updates
 
-### Environment Configuration
-1. Use strong, unique passwords for database connections
-2. Regularly rotate API keys and tokens
-3. Use environment variables for all sensitive configuration
-4. Enable database SSL/TLS in production
+### 🔗 Security Resources
 
-### Deployment Security
-1. Run the application with minimal privileges
-2. Use container security scanning
-3. Keep dependencies updated
-4. Monitor logs for suspicious activity
-5. Implement network segmentation
+#### External Security Tools
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [Docker Security Best Practices](https://docs.docker.com/engine/security/)
+- [PostgreSQL Security](https://www.postgresql.org/docs/current/security.html)
+- [Go Security Checklist](https://github.com/securego/gosec)
 
-### Monitoring
-1. Enable structured logging
-2. Monitor for unusual patterns in bot interactions
-3. Set up alerts for database connection failures
-4. Track resource usage patterns
-
-## Security Updates
-
-Security updates will be:
-1. Released as patch versions (e.g., 2.1.1 → 2.1.2)
-2. Documented in release notes with severity information
-3. Announced through GitHub releases and security advisories
-
-## Acknowledgments
-
-We appreciate the security research community and will acknowledge researchers who responsibly disclose vulnerabilities (with their permission).
-
-## Contact
-
-For security-related questions or concerns:
-- Email: security@yulia-lingo.com
-- GitHub: Create a private security advisory
-- Telegram: @zufarexplained (for urgent issues only)
+#### Security Scanning
+- `gosec` - Go security analyzer
+- `nancy` - Dependency vulnerability scanner
+- `trivy` - Container vulnerability scanner
+- `hadolint` - Dockerfile security linter
 
 ---
 
-**Note**: This security policy is subject to updates. Please check back regularly for the latest information.
+**Remember**: Security is an ongoing process, not a one-time setup. Regular updates, monitoring, and reviews are essential for maintaining a secure application.

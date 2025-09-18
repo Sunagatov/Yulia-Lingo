@@ -1,9 +1,11 @@
 package my_word_list
 
 import (
+	"context"
 	"fmt"
 
 	"Yulia-Lingo/internal/database"
+	"Yulia-Lingo/internal/logger"
 )
 
 const (
@@ -12,8 +14,8 @@ const (
 		SELECT w.id, w.word, w.part_of_speech, t.translation 
 		FROM words w 
 		JOIN translations t ON w.id = t.word_id 
-		WHERE w.part_of_speech = $3 
-		LIMIT $1 OFFSET $2`
+		WHERE w.part_of_speech = $1 
+		LIMIT $2 OFFSET $3`
 	createWordsTableQuery = `
 		CREATE TABLE IF NOT EXISTS words (
 			id SERIAL PRIMARY KEY,
@@ -29,25 +31,27 @@ const (
 )
 
 type Repository interface {
-	GetTotalCount(partOfSpeech string) (int, error)
-	GetPage(offset, limit int, partOfSpeech string) ([]Entity, error)
-	Initialize() error
+	GetTotalCount(ctx context.Context, partOfSpeech string) (int, error)
+	GetPage(ctx context.Context, offset, limit int, partOfSpeech string) ([]Entity, error)
+	Initialize(ctx context.Context) error
 }
 
-type repository struct{}
-
-func NewRepository() Repository {
-	return &repository{}
+type repository struct {
+	log logger.Logger
 }
 
-func (r *repository) GetTotalCount(partOfSpeech string) (int, error) {
-	db, err := database.GetDB()
+func NewRepository(log logger.Logger) Repository {
+	return &repository{log: log}
+}
+
+func (r *repository) GetTotalCount(ctx context.Context, partOfSpeech string) (int, error) {
+	pool, err := database.GetDB()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get database connection: %w", err)
 	}
 
 	var count int
-	err = db.QueryRow(getTotalCountQuery, partOfSpeech).Scan(&count)
+	err = pool.QueryRow(ctx, getTotalCountQuery, partOfSpeech).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get total count: %w", err)
 	}
@@ -55,13 +59,13 @@ func (r *repository) GetTotalCount(partOfSpeech string) (int, error) {
 	return count, nil
 }
 
-func (r *repository) GetPage(offset, limit int, partOfSpeech string) ([]Entity, error) {
-	db, err := database.GetDB()
+func (r *repository) GetPage(ctx context.Context, offset, limit int, partOfSpeech string) ([]Entity, error) {
+	pool, err := database.GetDB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database connection: %w", err)
 	}
 
-	rows, err := db.Query(getPageQuery, limit, offset, partOfSpeech)
+	rows, err := pool.Query(ctx, getPageQuery, partOfSpeech, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
@@ -84,22 +88,22 @@ func (r *repository) GetPage(offset, limit int, partOfSpeech string) ([]Entity, 
 	return entities, nil
 }
 
-func (r *repository) Initialize() error {
-	// Initializing word list tables
+func (r *repository) Initialize(ctx context.Context) error {
+	r.log.Info(ctx, "Initializing word list tables")
 
-	db, err := database.GetDB()
+	pool, err := database.GetDB()
 	if err != nil {
 		return fmt.Errorf("failed to get database connection: %w", err)
 	}
 
-	if _, err := db.Exec(createWordsTableQuery); err != nil {
+	if _, err := pool.Exec(ctx, createWordsTableQuery); err != nil {
 		return fmt.Errorf("failed to create words table: %w", err)
 	}
 
-	if _, err := db.Exec(createTranslationsTableQuery); err != nil {
+	if _, err := pool.Exec(ctx, createTranslationsTableQuery); err != nil {
 		return fmt.Errorf("failed to create translations table: %w", err)
 	}
 
-	// Word list tables initialized successfully
+	r.log.Info(ctx, "Word list tables initialized successfully")
 	return nil
 }
