@@ -4,7 +4,6 @@ import (
 	utilService "Yulia-Lingo/internal/util_services"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"log"
 )
 
 func HandleMyWordListButtonClick(bot *tgbotapi.BotAPI, chatID int64) error {
@@ -29,31 +28,19 @@ func CreatePartsOfSpeechKeyboardMarkup() (*tgbotapi.InlineKeyboardMarkup, error)
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var currentRow []tgbotapi.InlineKeyboardButton
 
-	partsOfSpeech := map[string]string{
-		"N":      "Существительное",
-		"V":      "Глагол",
-		"Adj":    "Прилагательное",
-		"Adv":    "Наречие",
-		"Pro":    "Местоимение",
-		"Prep":   "Предлог",
-		"Conj":   "Союз",
-		"Interj": "Междометие",
-	}
+	partsOfSpeech := getPartsOfSpeechRussianMapping()
 
-	for partsOfSpeechAbbreviation, partsOfSpeechInRussian := range partsOfSpeech {
-
-		requestData := KeyboardVerbValue{
+	for abbreviation, russianName := range partsOfSpeech {
+		requestData := KeyboardRequestData{
 			Req:          "MyWordList",
 			Page:         0,
-			PartOfSpeech: partsOfSpeechAbbreviation,
+			PartOfSpeech: abbreviation,
 		}
 		jsonAsString, err := utilService.ConvertToJson(requestData)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create JSON for partOfSpeech '%v': %v", partsOfSpeechAbbreviation, err)
-		} else {
-			log.Printf("JSON for partOfSpeech '%v'", jsonAsString)
+			return nil, fmt.Errorf("failed to create JSON for partOfSpeech '%s': %w", abbreviation, err)
 		}
-		btn := tgbotapi.NewInlineKeyboardButtonData(partsOfSpeechInRussian, jsonAsString)
+		btn := tgbotapi.NewInlineKeyboardButtonData(russianName, jsonAsString)
 		currentRow = append(currentRow, btn)
 
 		if len(currentRow) == 2 {
@@ -65,4 +52,23 @@ func CreatePartsOfSpeechKeyboardMarkup() (*tgbotapi.InlineKeyboardMarkup, error)
 		rows = append(rows, currentRow)
 	}
 	return &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: rows}, nil
+}
+
+type KeyboardRequestData struct {
+	Req          string
+	Page         int
+	PartOfSpeech string
+}
+
+func getPartsOfSpeechRussianMapping() map[string]string {
+	return map[string]string{
+		"N":      "Существительное",
+		"V":      "Глагол",
+		"Adj":    "Прилагательное",
+		"Adv":    "Наречие",
+		"Pro":    "Местоимение",
+		"Prep":   "Предлог",
+		"Conj":   "Союз",
+		"Interj": "Междометие",
+	}
 }

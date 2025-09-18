@@ -35,7 +35,7 @@ func CreateLetterKeyboardMarkup() (*tgbotapi.InlineKeyboardMarkup, error) {
 		requestData := KeyboardVerbValue{
 			Request: "IrregularVerbs",
 			Page:    0,
-			Latter:  letterAsString,
+			Letter:  letterAsString,
 		}
 		jsonAsString, err := utilService.ConvertToJson(requestData)
 		if err != nil {

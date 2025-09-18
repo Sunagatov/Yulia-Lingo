@@ -13,7 +13,7 @@ const IrregularVerbsCountPerPage = 5
 type KeyboardVerbValue struct {
 	Request string
 	Page    int
-	Latter  string
+	Letter  string
 }
 
 func KeyboardVerbValueFromJSON(jsonStr string) (KeyboardVerbValue, error) {
@@ -33,7 +33,7 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 	if err != nil {
 		return fmt.Errorf("failed to map keyboardVerbValue: %v", err)
 	}
-	selectedLetter := keyboardVerbValue.Latter
+	selectedLetter := keyboardVerbValue.Letter
 	currentPageNumber := keyboardVerbValue.Page
 
 	irregularVerbsPageAsText, err := GetIrregularVerbsPageAsText(currentPageNumber, selectedLetter)
@@ -97,7 +97,7 @@ func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyb
 		jsonPrev, err := utilService.ConvertToJson(KeyboardVerbValue{
 			Request: "IrregularVerbs",
 			Page:    currentPage - 1,
-			Latter:  letter,
+			Letter:  letter,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create a json for the case (currentPage > 0): %v", err)
@@ -108,7 +108,7 @@ func CreateInlineKeyboard(currentPage int, letter string) ([]tgbotapi.InlineKeyb
 		jsonNext, err := utilService.ConvertToJson(KeyboardVerbValue{
 			Request: "IrregularVerbs",
 			Page:    currentPage + 1,
-			Latter:  letter,
+			Letter:  letter,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create a json for the case (currentPage < totalPages): %v", err)

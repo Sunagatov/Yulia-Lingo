@@ -1,31 +1,41 @@
 package bot_manager
 
 import (
+	"Yulia-Lingo/internal/config"
+	"Yulia-Lingo/internal/logger"
 	"fmt"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"os"
+	"github.com/sirupsen/logrus"
 )
 
-func ConfigureTelegramBotWebhook(bot *tgbotapi.BotAPI) error {
-	webhookURL := os.Getenv("TELEGRAM_WEBHOOK_URL")
-	if webhookURL == "" {
-		return fmt.Errorf("failed to read TELEGRAM_WEBHOOK_URL from the environment variables")
+func ConfigureTelegramBotWebhook(bot *tgbotapi.BotAPI, cfg *config.Config) error {
+	if cfg.Telegram.WebhookURL == "" {
+		return fmt.Errorf("webhook URL is required")
 	}
 
-	webhook, err := tgbotapi.NewWebhook(webhookURL)
+	webhook, err := tgbotapi.NewWebhook(cfg.Telegram.WebhookURL)
 	if err != nil {
-		return fmt.Errorf("failed to create webhook: %v", err)
+		return fmt.Errorf("failed to create webhook: %w", err)
 	}
 
-	_, err = bot.Request(webhook)
-	if err != nil {
-		return fmt.Errorf("failed to set webhook: %v", err)
+	if _, err := bot.Request(webhook); err != nil {
+		return fmt.Errorf("failed to set webhook: %w", err)
 	}
 
-	_, err = bot.GetWebhookInfo()
-	if err != nil {
-		return fmt.Errorf("failed to get webhook info: %v", err)
+	logger.Info("Webhook configured successfully", logrus.Fields{
+		"webhook_url": cfg.Telegram.WebhookURL,
+	})
+
+	return nil
+}
+
+func RemoveWebhook(bot *tgbotapi.BotAPI) error {
+	removeWebhook := tgbotapi.DeleteWebhookConfig{}
+	if _, err := bot.Request(removeWebhook); err != nil {
+		return fmt.Errorf("failed to remove webhook: %w", err)
 	}
 
+	logger.Info("Webhook removed successfully")
 	return nil
 }

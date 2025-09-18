@@ -15,7 +15,7 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, botUpdate tgbotapi.Update) error 
 	case strings.Contains(callbackMessageFromUser, "IrregularVerbs"):
 		return irregularVerbsCallbackHandler.HandleIrregularVerbListCallback(callbackQuery, bot)
 	case strings.Contains(callbackMessageFromUser, "MyWordList"):
-		return myWordListCallbackHandler.HandleIrregularVerbListCallback(callbackQuery, bot)
+		return myWordListCallbackHandler.HandleMyWordListCallback(callbackQuery, bot)
 	default:
 		return nil
 	}

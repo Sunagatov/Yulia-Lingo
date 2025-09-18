@@ -4,6 +4,7 @@ import (
 	utilService "Yulia-Lingo/internal/util_services"
 	"encoding/json"
 	"fmt"
+	"strings"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -24,7 +25,7 @@ func KeyboardVerbValueFromJSON(jsonStr string) (KeyboardVerbValue, error) {
 
 const MyWordsListCountPerPage = 5
 
-func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI) error {
+func HandleMyWordListCallback(callbackQuery *tgbotapi.CallbackQuery, bot *tgbotapi.BotAPI) error {
 	callbackData := callbackQuery.Data
 	callbackChatId := callbackQuery.Message.Chat.ID
 
@@ -33,18 +34,10 @@ func HandleIrregularVerbListCallback(callbackQuery *tgbotapi.CallbackQuery, bot 
 		return fmt.Errorf("failed to map keyboardVerbValue: %v", err)
 	}
 
-	partsOfSpeech := map[string]string{
-		"N":      "Noun",
-		"V":      "Verb",
-		"Adj":    "Adjective",
-		"Adv":    "Adverb",
-		"Pro":    "Pronoun",
-		"Prep":   "Preposition",
-		"Conj":   "Conjunction",
-		"Interj": "Interjection",
+	partOfSpeech := getPartOfSpeechMapping()[keyboardVerbValue.PartOfSpeech]
+	if partOfSpeech == "" {
+		return fmt.Errorf("invalid part of speech: %s", keyboardVerbValue.PartOfSpeech)
 	}
-
-	partOfSpeech := partsOfSpeech[keyboardVerbValue.PartOfSpeech]
 	currentPageNumber := keyboardVerbValue.Page
 
 	myWordListPageAsText, err := GetMyWordListPageAsText(currentPageNumber, partOfSpeech)
@@ -89,11 +82,11 @@ func GetMyWordListPageAsText(currentPageNumber int, partOfSpeech string) (string
 	if len(myWordListPage) == 0 {
 		return "", nil
 	}
-	var irregularVerbsPageAsText string
+	var builder strings.Builder
 	for _, word := range myWordListPage {
-		irregularVerbsPageAsText += fmt.Sprintf("*%s*:\n*[*%s*]*\n\n", word.EnglishWord, word.Translations)
+		builder.WriteString(fmt.Sprintf("*%s*:\n*[*%s*]*\n\n", word.EnglishWord, word.Translations))
 	}
-	return irregularVerbsPageAsText, nil
+	return builder.String(), nil
 }
 
 func CreateInlineKeyboard(currentPage int, partOfSpeech string) ([]tgbotapi.InlineKeyboardButton, error) {
@@ -132,4 +125,17 @@ func CreateInlineKeyboard(currentPage int, partOfSpeech string) ([]tgbotapi.Inli
 	}
 
 	return keyboard, nil
+}
+
+func getPartOfSpeechMapping() map[string]string {
+	return map[string]string{
+		"N":      "Noun",
+		"V":      "Verb",
+		"Adj":    "Adjective",
+		"Adv":    "Adverb",
+		"Pro":    "Pronoun",
+		"Prep":   "Preposition",
+		"Conj":   "Conjunction",
+		"Interj": "Interjection",
+	}
 }

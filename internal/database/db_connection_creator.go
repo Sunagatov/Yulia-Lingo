@@ -3,8 +3,10 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
 	"os"
+
+	_ "github.com/lib/pq"
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -13,16 +15,18 @@ var (
 )
 
 func CreateDatabaseConnection() error {
+	// Load .env file
+	godotenv.Load()
+
 	host := os.Getenv("POSTGRESQL_HOST")
 	port := os.Getenv("POSTGRESQL_PORT")
 	user := os.Getenv("POSTGRESQL_USER")
 	password := os.Getenv("POSTGRESQL_PASSWORD")
 	dbname := os.Getenv("POSTGRESQL_DATABASE_NAME")
-	//host := "localhost"
-	//port := "5432"
-	//user := "postgres"
-	//password := "postgres"
-	//dbname := "testdb"
+
+	if host == "" || port == "" || user == "" || password == "" || dbname == "" {
+		return fmt.Errorf("missing required database environment variables")
+	}
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 
