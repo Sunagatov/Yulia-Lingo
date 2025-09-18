@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
+
+	"Yulia-Lingo/internal/util"
 )
 
 // Entity represents an irregular verb with all its forms
@@ -26,7 +28,7 @@ func (e *Entity) Validate() error {
 	if strings.TrimSpace(e.PastParticiple) == "" {
 		return fmt.Errorf("past participle cannot be empty")
 	}
-	if !isValidEnglishWord(e.Verb) {
+	if !util.IsValidEnglishWord(e.Verb) {
 		return fmt.Errorf("invalid verb format: %s", e.Verb)
 	}
 	return nil
@@ -60,16 +62,4 @@ func (k *KeyboardVerbValue) Validate() error {
 		return fmt.Errorf("letter must be a single alphabetic character or BACK_TO_LETTERS")
 	}
 	return nil
-}
-
-func isValidEnglishWord(word string) bool {
-	if len(word) == 0 {
-		return false
-	}
-	for _, r := range word {
-		if !unicode.IsLetter(r) && r != '-' && r != '\'' {
-			return false
-		}
-	}
-	return true
 }

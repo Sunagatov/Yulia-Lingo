@@ -22,7 +22,7 @@ const (
 
 type MessageHandler struct {
 	irregularVerbsService domain.Service
-	myWordListService     domain.Service
+	myWordListService     domain.WordListService
 	translateService      TranslateService
 	log                   logger.Logger
 }
@@ -33,7 +33,7 @@ type TranslateService interface {
 
 func NewMessageHandler(
 	irregularVerbsService domain.Service,
-	myWordListService domain.Service,
+	myWordListService domain.WordListService,
 	translateService TranslateService,
 	log logger.Logger,
 ) *MessageHandler {

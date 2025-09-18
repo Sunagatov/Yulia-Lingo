@@ -23,14 +23,6 @@ func (t *Translation) Validate() error {
 	return nil
 }
 
-// GetFirstTranslation returns the first available translation term
-func (t *Translation) GetFirstTranslation() string {
-	if len(t.Dictionary) == 0 || len(t.Dictionary[0].Terms) == 0 {
-		return "Translation not available"
-	}
-	return t.Dictionary[0].Terms[0]
-}
-
 // DictionaryEntry represents a dictionary entry with part of speech and terms
 type DictionaryEntry struct {
 	PartOfSpeech string   `json:"part_of_speech"`
