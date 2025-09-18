@@ -56,9 +56,7 @@ func run() error {
 		"username": bot.Self.UserName,
 	})
 
-	if err := botManager.RemoveWebhook(); err != nil {
-		logger.Warn("Failed to remove webhook", logrus.Fields{"error": err.Error()})
-	}
+
 
 	logger.Info("Starting polling mode")
 

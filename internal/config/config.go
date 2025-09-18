@@ -25,8 +25,7 @@ type DatabaseConfig struct {
 }
 
 type TelegramConfig struct {
-	BotToken   string
-	WebhookURL string
+	BotToken string
 }
 
 type TranslateConfig struct {
@@ -53,8 +52,7 @@ func Load() (*Config, error) {
 			Name:     getEnv("POSTGRESQL_DATABASE_NAME", "yulia_lingo"),
 		},
 		Telegram: TelegramConfig{
-			BotToken:   getEnv("TELEGRAM_BOT_TOKEN", ""),
-			WebhookURL: getEnv("TELEGRAM_WEBHOOK_URL", ""),
+			BotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
 		},
 		Translate: TranslateConfig{
 			APIURL:  getEnv("YOUR_TRANSLATE_API_URL", ""),
