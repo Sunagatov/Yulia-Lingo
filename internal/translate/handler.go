@@ -39,7 +39,7 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 	lang := session.Lang()
 
 	if !isValidWord(text) {
-		msg := bot.NewTextMessage(chatID, h.msgSource.Get(lang, i18n.MsgInvalidWord))
+		msg := bot.NewMessage(chatID, h.msgSource.Get(lang, i18n.MsgInvalidWord))
 		_, err := b.Send(msg)
 		return err
 	}
@@ -47,12 +47,12 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 	result, err := h.client.Translate(ctx, text, string(lang))
 	if err != nil {
 		h.log.Error(ctx, "translate.failed", err, logger.Field{Key: "word", Value: text})
-		msg := bot.NewTextMessage(chatID, h.msgSource.Get(lang, i18n.MsgTranslateError))
+		msg := bot.NewMessage(chatID, h.msgSource.Get(lang, i18n.MsgTranslateError))
 		_, err = b.Send(msg)
 		return err
 	}
 
-	msg := bot.NewTextMessageWithKeyboard(chatID, h.buildText(text, result, lang), h.buildActionKeyboard(text, lang))
+	msg := bot.NewMessageWithKeyboard(chatID, h.buildText(text, result, lang), h.buildActionKeyboard(text, lang))
 	_, sendErr := b.Send(msg)
 	return sendErr
 }

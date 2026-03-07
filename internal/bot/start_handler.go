@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"Yulia-Lingo/internal/i18n"
-	"Yulia-Lingo/internal/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -15,7 +14,7 @@ type StartHandler struct {
 	msgSource *i18n.MessageSource
 }
 
-func NewStartHandler(msgSource *i18n.MessageSource, log logger.Logger) *StartHandler {
+func NewStartHandler(msgSource *i18n.MessageSource) *StartHandler {
 	return &StartHandler{msgSource: msgSource}
 }
 

@@ -6,7 +6,6 @@ import (
 
 	"Yulia-Lingo/internal/bot"
 	"Yulia-Lingo/internal/i18n"
-	"Yulia-Lingo/internal/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -30,7 +29,7 @@ type Handler struct {
 	msgSource *i18n.MessageSource
 }
 
-func NewHandler(repo Repository, msgSource *i18n.MessageSource, log logger.Logger) *Handler {
+func NewHandler(repo Repository, msgSource *i18n.MessageSource) *Handler {
 	return &Handler{repo: repo, msgSource: msgSource}
 }
 
@@ -40,7 +39,7 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 	lang := session.Lang()
 	counts, _ := h.repo.GetCountsByPOS(ctx)
 	keyboard := h.buildPosKeyboard(lang, "", counts)
-	msg := bot.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChoosePartOfSpeech), &keyboard)
+	msg := bot.NewMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChoosePartOfSpeech), &keyboard)
 	_, err := b.Send(msg)
 	return err
 }

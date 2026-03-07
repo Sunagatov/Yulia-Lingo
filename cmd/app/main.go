@@ -71,14 +71,14 @@ func run() error {
 		return fmt.Errorf("init word_list: %w", err)
 	}
 
-	irrVerbsHandler := irregular_verbs.NewHandler(irrVerbsRepo, msgSource, log)
-	wordListHandler := my_word_list.NewHandler(wordListRepo, msgSource, log)
+	irrVerbsHandler := irregular_verbs.NewHandler(irrVerbsRepo, msgSource)
+	wordListHandler := my_word_list.NewHandler(wordListRepo, msgSource)
 	translateHandler := translate.NewHandler(translate.NewAPIClient(cfg, log), msgSource, log)
 	langHandler := user_prefs.NewHandler(prefsRepo, msgSource, log)
 
 	registry := bot.NewHandlerRegistry(msgSource)
-	registry.Register(bot.NewStartHandler(msgSource, log))
-	registry.Register(bot.NewHelpHandler(msgSource, log))
+	registry.Register(bot.NewStartHandler(msgSource))
+	registry.Register(bot.NewHelpHandler(msgSource))
 	registry.Register(irrVerbsHandler)
 	registry.Register(wordListHandler)
 	registry.Register(translateHandler)

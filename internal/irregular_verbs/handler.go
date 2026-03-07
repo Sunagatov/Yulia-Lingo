@@ -7,7 +7,6 @@ import (
 
 	"Yulia-Lingo/internal/bot"
 	"Yulia-Lingo/internal/i18n"
-	"Yulia-Lingo/internal/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -27,7 +26,7 @@ type Handler struct {
 	msgSource *i18n.MessageSource
 }
 
-func NewHandler(repo Repository, msgSource *i18n.MessageSource, log logger.Logger) *Handler {
+func NewHandler(repo Repository, msgSource *i18n.MessageSource) *Handler {
 	return &Handler{repo: repo, msgSource: msgSource}
 }
 
@@ -36,7 +35,7 @@ func (h *Handler) Command() string { return i18n.MsgLabelIrregularVerbs }
 func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *bot.UserSession) error {
 	lang := session.Lang()
 	keyboard := h.buildLetterKeyboard(session.ActiveLetter())
-	msg := bot.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChooseLetter), &keyboard)
+	msg := bot.NewMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChooseLetter), &keyboard)
 	_, err := b.Send(msg)
 	return err
 }

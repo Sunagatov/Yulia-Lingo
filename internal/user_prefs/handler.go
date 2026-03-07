@@ -28,7 +28,7 @@ func (h *Handler) Command() string { return "/lang" }
 func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *bot.UserSession) error {
 	lang := session.Lang()
 	keyboard := h.buildKeyboard(lang)
-	msg := bot.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChooseLanguage), &keyboard)
+	msg := bot.NewMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChooseLanguage), &keyboard)
 	_, err := b.Send(msg)
 	return err
 }
