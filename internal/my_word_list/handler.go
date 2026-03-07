@@ -38,6 +38,10 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 	words, _ := h.repo.GetPage(ctx, update.Message.From.ID, 0, wordsPerPage)
 	totalPages := max(1, (total+wordsPerPage-1)/wordsPerPage)
 	text := h.buildText(session.Lang(), words, 0, total, totalPages)
+	if len(words) == 0 {
+		_, err := b.Send(bot.NewMessage(update.Message.Chat.ID, text))
+		return err
+	}
 	keyboard := h.buildKeyboard(session.Lang(), words, 0, total, totalPages)
 	msg := bot.NewMessageWithKeyboard(update.Message.Chat.ID, text, &keyboard)
 	_, err := b.Send(msg)
@@ -124,6 +128,11 @@ func (h *Handler) showPage(ctx context.Context, b *tgbotapi.BotAPI, query *tgbot
 	}
 	words, _ := h.repo.GetPage(ctx, userID, page*wordsPerPage, wordsPerPage)
 	text := h.buildText(session.Lang(), words, page, total, totalPages)
+	if len(words) == 0 {
+		msg := bot.NewEditMessage(query.Message.Chat.ID, query.Message.MessageID, text)
+		_, err := b.Send(msg)
+		return err
+	}
 	keyboard := h.buildKeyboard(session.Lang(), words, page, total, totalPages)
 	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &keyboard)
 	_, err := b.Send(msg)
@@ -153,11 +162,6 @@ func (h *Handler) buildText(lang i18n.Lang, words []Entity, page, total, totalPa
 
 func (h *Handler) buildKeyboard(lang i18n.Lang, words []Entity, page, total, totalPages int) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
-
-	if len(words) == 0 {
-		// empty state: single CTA
-		return tgbotapi.NewInlineKeyboardMarkup()
-	}
 
 	// 2 delete buttons per row — compact, word as label
 	for i := 0; i < len(words); i += 2 {
