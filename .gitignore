@@ -57,3 +57,4 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+/go.sum
