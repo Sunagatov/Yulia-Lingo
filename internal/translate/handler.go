@@ -8,7 +8,6 @@ import (
 	"Yulia-Lingo/internal/bot"
 	"Yulia-Lingo/internal/i18n"
 	"Yulia-Lingo/internal/logger"
-	"Yulia-Lingo/internal/util"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -39,7 +38,7 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 	chatID := update.Message.Chat.ID
 	lang := session.Lang()
 
-	if !util.IsValidEnglishWord(text) {
+	if !isValidWord(text) {
 		msg := bot.NewTextMessage(chatID, h.msgSource.Get(lang, i18n.MsgInvalidWord))
 		_, err := b.Send(msg)
 		return err

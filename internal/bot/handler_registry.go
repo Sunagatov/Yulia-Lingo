@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"sync"
 
 	"Yulia-Lingo/internal/i18n"
 
@@ -25,21 +24,17 @@ type HandlerRegistry struct {
 	stateful      []StatefulHandler
 	replyKeyboard map[string]string
 	msgSource     *i18n.MessageSource
-	mu            sync.RWMutex
 }
 
 func NewHandlerRegistry(msgSource *i18n.MessageSource) *HandlerRegistry {
 	return &HandlerRegistry{
 		commands:      make(map[string]CommandHandler),
-		stateful:      make([]StatefulHandler, 0),
 		replyKeyboard: make(map[string]string),
 		msgSource:     msgSource,
 	}
 }
 
 func (r *HandlerRegistry) Register(handler CommandHandler) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.commands[handler.Command()] = handler
 	if sh, ok := handler.(StatefulHandler); ok {
 		r.stateful = append(r.stateful, sh)
@@ -47,38 +42,28 @@ func (r *HandlerRegistry) Register(handler CommandHandler) {
 }
 
 func (r *HandlerRegistry) RegisterReplyKeyboard(label, command string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.replyKeyboard[label] = command
 }
 
+// Route dispatches in priority order:
+// /cancel → exact command → reply keyboard label → active FSM state → default fallback
 func (r *HandlerRegistry) Route(ctx context.Context, bot *tgbotapi.BotAPI, update tgbotapi.Update, session *UserSession) error {
 	if update.Message == nil {
 		return nil
 	}
 	text := update.Message.Text
 
-	// Priority 1: /cancel
 	if text == "/cancel" {
 		return r.handleCancel(ctx, bot, update, session)
 	}
-
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	// Priority 2: exact command
 	if handler, ok := r.commands[text]; ok {
 		return handler.Handle(ctx, bot, update, session)
 	}
-
-	// Priority 3: reply keyboard label → command
 	if cmd, ok := r.replyKeyboard[text]; ok {
 		if handler, ok := r.commands[cmd]; ok {
 			return handler.Handle(ctx, bot, update, session)
 		}
 	}
-
-	// Priority 4: active FSM state
 	if session.GetState() != StateIdle {
 		for _, sh := range r.stateful {
 			for _, state := range sh.HandledStates() {
@@ -88,12 +73,9 @@ func (r *HandlerRegistry) Route(ctx context.Context, bot *tgbotapi.BotAPI, updat
 			}
 		}
 	}
-
-	// Priority 5: default fallback
 	if handler, ok := r.commands["default"]; ok {
 		return handler.Handle(ctx, bot, update, session)
 	}
-
 	return nil
 }
 
@@ -106,7 +88,7 @@ func (r *HandlerRegistry) handleCancel(ctx context.Context, bot *tgbotapi.BotAPI
 	} else {
 		text = r.msgSource.Get(lang, i18n.MsgNothingToCancel)
 	}
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+	msg := NewMessage(update.Message.Chat.ID, text)
 	_, err := bot.Send(msg)
 	return err
 }

@@ -2,12 +2,10 @@ package logger
 
 import (
 	"context"
+	"log/slog"
 	"os"
-	"time"
 
 	"Yulia-Lingo/internal/config"
-
-	"github.com/sirupsen/logrus"
 )
 
 type Logger interface {
@@ -15,75 +13,56 @@ type Logger interface {
 	Info(ctx context.Context, msg string, fields ...Field)
 	Warn(ctx context.Context, msg string, fields ...Field)
 	Error(ctx context.Context, msg string, err error, fields ...Field)
-	Fatal(ctx context.Context, msg string, err error, fields ...Field)
 }
 
 type Field struct {
 	Key   string
-	Value interface{}
+	Value any
 }
 
-type logger struct {
-	log *logrus.Logger
-}
+type logger struct{ log *slog.Logger }
 
-var defaultLogger Logger
-
-func Initialize(cfg *config.Config) {
-	log := logrus.New()
-	log.SetOutput(os.Stdout)
-
-	if cfg.Logging.Format == "text" {
-		log.SetFormatter(&logrus.TextFormatter{TimestampFormat: time.RFC3339, FullTimestamp: true})
-	} else {
-		log.SetFormatter(&logrus.JSONFormatter{TimestampFormat: time.RFC3339})
-	}
-
+func New(cfg *config.Config) Logger {
+	level := slog.LevelInfo
 	switch cfg.Logging.Level {
 	case "debug":
-		log.SetLevel(logrus.DebugLevel)
+		level = slog.LevelDebug
 	case "warn":
-		log.SetLevel(logrus.WarnLevel)
+		level = slog.LevelWarn
 	case "error":
-		log.SetLevel(logrus.ErrorLevel)
-	default:
-		log.SetLevel(logrus.InfoLevel)
+		level = slog.LevelError
 	}
-
-	defaultLogger = &logger{log: log}
-}
-
-func New() Logger {
-	if defaultLogger == nil {
-		panic("logger not initialized")
+	opts := &slog.HandlerOptions{Level: level}
+	var handler slog.Handler
+	if cfg.Logging.Format == "text" {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	} else {
+		handler = slog.NewJSONHandler(os.Stdout, opts)
 	}
-	return defaultLogger
+	return &logger{log: slog.New(handler)}
 }
 
 func (l *logger) Debug(ctx context.Context, msg string, fields ...Field) {
-	l.entry(ctx, fields).Debug(msg)
+	l.log.DebugContext(ctx, msg, toAttrs(fields)...)
 }
 
 func (l *logger) Info(ctx context.Context, msg string, fields ...Field) {
-	l.entry(ctx, fields).Info(msg)
+	l.log.InfoContext(ctx, msg, toAttrs(fields)...)
 }
 
 func (l *logger) Warn(ctx context.Context, msg string, fields ...Field) {
-	l.entry(ctx, fields).Warn(msg)
+	l.log.WarnContext(ctx, msg, toAttrs(fields)...)
 }
 
 func (l *logger) Error(ctx context.Context, msg string, err error, fields ...Field) {
-	l.entry(ctx, fields).WithError(err).Error(msg)
+	attrs := append(toAttrs(fields), slog.Any("error", err))
+	l.log.ErrorContext(ctx, msg, attrs...)
 }
 
-func (l *logger) Fatal(ctx context.Context, msg string, err error, fields ...Field) {
-	l.entry(ctx, fields).WithError(err).Fatal(msg)
-}
-
-func (l *logger) entry(ctx context.Context, fields []Field) *logrus.Entry {
-	entry := l.log.WithContext(ctx)
+func toAttrs(fields []Field) []any {
+	attrs := make([]any, 0, len(fields)*2)
 	for _, f := range fields {
-		entry = entry.WithField(f.Key, f.Value)
+		attrs = append(attrs, f.Key, f.Value)
 	}
-	return entry
+	return attrs
 }

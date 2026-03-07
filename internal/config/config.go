@@ -50,7 +50,6 @@ type LoggingConfig struct {
 
 type AppConfig struct {
 	IrregularVerbsFilePath string
-	GracefulShutdownTime   time.Duration
 }
 
 func Load() (*Config, error) {
@@ -88,7 +87,6 @@ func Load() (*Config, error) {
 		},
 		App: AppConfig{
 			IrregularVerbsFilePath: getEnv("IRREGULAR_VERBS_FILE_PATH", "resource/nepravilnye-glagoly-295.xlsx"),
-			GracefulShutdownTime:   getEnvDuration("GRACEFUL_SHUTDOWN_TIME", 30*time.Second),
 		},
 	}
 

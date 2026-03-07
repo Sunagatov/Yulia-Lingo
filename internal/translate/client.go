@@ -7,11 +7,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
+	"unicode"
 
 	"Yulia-Lingo/internal/config"
 	"Yulia-Lingo/internal/logger"
-	"Yulia-Lingo/internal/util"
 )
 
 const (
@@ -51,10 +52,10 @@ func NewAPIClient(cfg *config.Config, log logger.Logger) APIClient {
 }
 
 func (c *client) Translate(ctx context.Context, word string, targetLang string) (Translation, error) {
-	if !util.IsValidEnglishWord(word) {
+	if !isValidWord(word) {
 		return Translation{}, fmt.Errorf("invalid word: %s", word)
 	}
-	word = util.SanitizeString(word)
+	word = strings.TrimSpace(word)
 
 	var lastErr error
 	for attempt := range maxRetries {
@@ -140,6 +141,18 @@ func (c *client) doTranslate(ctx context.Context, word, targetLang string) (Tran
 	}
 
 	return Translation{Dictionary: []DictionaryEntry{{PartOfSpeech: "word", Terms: terms}}}, nil
+}
+
+func isValidWord(word string) bool {
+	if len(word) == 0 || len(word) > 50 {
+		return false
+	}
+	for _, r := range word {
+		if !unicode.IsLetter(r) && r != '-' && r != '\'' {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *client) buildURL(word, targetLang string) (string, error) {

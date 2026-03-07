@@ -37,8 +37,7 @@ func run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	logger.Initialize(cfg)
-	log := logger.New()
+	log := logger.New(cfg)
 	log.Info(ctx, "app.starting", logger.Field{Key: "version", Value: "1.0.0"})
 
 	db, err := database.Connect(ctx, cfg, log)
