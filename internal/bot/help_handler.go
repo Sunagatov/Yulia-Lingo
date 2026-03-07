@@ -11,17 +11,15 @@ import (
 
 type HelpHandler struct {
 	msgSource *i18n.MessageSource
-	log       logger.Logger
 }
 
-func NewHelpHandler(msgSource *i18n.MessageSource, log logger.Logger) *HelpHandler {
-	return &HelpHandler{msgSource: msgSource, log: log}
+func NewHelpHandler(msgSource *i18n.MessageSource, _ logger.Logger) *HelpHandler {
+	return &HelpHandler{msgSource: msgSource}
 }
 
 func (h *HelpHandler) Command() string { return "/help" }
 
-func (h *HelpHandler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *UserSession) error {
-	msg := NewMessage(update.Message.Chat.ID, h.msgSource.Get(session.Lang(), i18n.MsgHelp))
-	_, err := b.Send(msg)
+func (h *HelpHandler) Handle(_ context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *UserSession) error {
+	_, err := b.Send(NewMessage(update.Message.Chat.ID, h.msgSource.Get(session.Lang(), i18n.MsgHelp)))
 	return err
 }

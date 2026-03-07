@@ -12,7 +12,6 @@ type BotState string
 const StateIdle BotState = "IDLE"
 
 type UserSession struct {
-	UserID       int64
 	mu           sync.RWMutex
 	state        BotState
 	language     string
@@ -80,7 +79,7 @@ func (sm *SessionManager) GetOrCreate(ctx context.Context, userID int64) *UserSe
 	if val, ok := sm.sessions.Load(userID); ok {
 		return val.(*UserSession)
 	}
-	s := &UserSession{UserID: userID, state: StateIdle}
+	s := &UserSession{state: StateIdle}
 	if lang, err := sm.langRepo.GetLanguage(ctx, userID); err == nil && lang != "" {
 		s.language = lang
 	}

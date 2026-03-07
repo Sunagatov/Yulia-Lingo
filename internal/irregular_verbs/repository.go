@@ -7,7 +7,6 @@ import (
 	"strings"
 	"unicode"
 
-	"Yulia-Lingo/internal/config"
 	"Yulia-Lingo/internal/logger"
 
 	"github.com/jackc/pgx/v5"
@@ -43,14 +42,13 @@ type repository struct {
 	log      logger.Logger
 }
 
-func NewRepository(db *pgxpool.Pool, cfg *config.Config, log logger.Logger) Repository {
-	filePath := cfg.App.IrregularVerbsFilePath
-	if !filepath.IsAbs(filePath) {
-		if abs, err := filepath.Abs(filePath); err == nil {
-			filePath = abs
+func NewRepository(db *pgxpool.Pool, verbsFilePath string, log logger.Logger) Repository {
+	if !filepath.IsAbs(verbsFilePath) {
+		if abs, err := filepath.Abs(verbsFilePath); err == nil {
+			verbsFilePath = abs
 		}
 	}
-	return &repository{db: db, filePath: filePath, log: log}
+	return &repository{db: db, filePath: verbsFilePath, log: log}
 }
 
 func (r *repository) GetTotalCount(ctx context.Context, letter string) (int, error) {

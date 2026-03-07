@@ -13,11 +13,10 @@ import (
 
 type StartHandler struct {
 	msgSource *i18n.MessageSource
-	log       logger.Logger
 }
 
 func NewStartHandler(msgSource *i18n.MessageSource, log logger.Logger) *StartHandler {
-	return &StartHandler{msgSource: msgSource, log: log}
+	return &StartHandler{msgSource: msgSource}
 }
 
 func (h *StartHandler) Command() string { return "/start" }
@@ -40,6 +39,5 @@ func (h *StartHandler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tg
 		return fmt.Errorf("send start: %w", err)
 	}
 	session.ClearState()
-	h.log.Info(ctx, "start.sent", logger.Field{Key: "user_id", Value: update.Message.From.ID})
 	return nil
 }

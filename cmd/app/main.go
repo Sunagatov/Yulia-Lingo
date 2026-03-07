@@ -58,7 +58,7 @@ func run() error {
 	log.Info(ctx, "bot.authorized", logger.Field{Key: "username", Value: tg.Self.UserName})
 
 	prefsRepo := user_prefs.NewRepository(db)
-	irrVerbsRepo := irregular_verbs.NewRepository(db, cfg, log)
+	irrVerbsRepo := irregular_verbs.NewRepository(db, cfg.App.IrregularVerbsFilePath, log)
 	wordListRepo := my_word_list.NewRepository(db)
 
 	if err := prefsRepo.Initialize(ctx); err != nil {
