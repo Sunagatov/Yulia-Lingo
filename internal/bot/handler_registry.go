@@ -64,10 +64,10 @@ func (r *HandlerRegistry) Route(ctx context.Context, bot *tgbotapi.BotAPI, updat
 			return handler.Handle(ctx, bot, update, session)
 		}
 	}
-	if session.GetState() != StateIdle {
+	if session.State() != StateIdle {
 		for _, sh := range r.stateful {
 			for _, state := range sh.HandledStates() {
-				if state == session.GetState() {
+				if state == session.State() {
 					return sh.HandleState(ctx, bot, update, session)
 				}
 			}
@@ -82,7 +82,7 @@ func (r *HandlerRegistry) Route(ctx context.Context, bot *tgbotapi.BotAPI, updat
 func (r *HandlerRegistry) handleCancel(ctx context.Context, bot *tgbotapi.BotAPI, update tgbotapi.Update, session *UserSession) error {
 	lang := session.Lang()
 	var text string
-	if session.GetState() != StateIdle {
+	if session.State() != StateIdle {
 		text = r.msgSource.Get(lang, i18n.MsgCancelled)
 		session.ClearState()
 	} else {

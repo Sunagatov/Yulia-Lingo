@@ -25,7 +25,7 @@ func (s *UserSession) SetState(state BotState) {
 	s.state = state
 }
 
-func (s *UserSession) GetState() BotState {
+func (s *UserSession) State() BotState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.state
@@ -56,7 +56,7 @@ func (s *UserSession) SetActiveLetter(letter string) {
 	s.activeLetter = letter
 }
 
-func (s *UserSession) GetActiveLetter() string {
+func (s *UserSession) ActiveLetter() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.activeLetter

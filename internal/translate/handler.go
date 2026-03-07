@@ -92,7 +92,7 @@ func (h *Handler) buildText(word string, t Translation, lang i18n.Lang) string {
 		if i >= maxTranslations {
 			break
 		}
-		entry.Sanitize()
+		entry.PartOfSpeech = strings.TrimSpace(entry.PartOfSpeech)
 		b.WriteString(h.msgSource.Get(lang, i18n.MsgTranslationEntry, entry.PartOfSpeech) + "\n")
 		for j, term := range entry.Terms {
 			if j >= maxTranslations {

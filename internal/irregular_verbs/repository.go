@@ -109,12 +109,12 @@ func (r *repository) insertVerbsFromFile(ctx context.Context, tx pgx.Tx) error {
 		return fmt.Errorf("no irregular verbs found in file")
 	}
 	for _, e := range entities {
-		e.Sanitize()
-		if err := e.Validate(); err != nil {
-			r.log.Warn(ctx, "verb.skip_invalid",
-				logger.Field{Key: "verb", Value: e.Verb},
-				logger.Field{Key: "error", Value: err.Error()},
-			)
+		e.Original = strings.TrimSpace(e.Original)
+		e.Verb = strings.ToLower(strings.TrimSpace(e.Verb))
+		e.Past = strings.ToLower(strings.TrimSpace(e.Past))
+		e.PastParticiple = strings.ToLower(strings.TrimSpace(e.PastParticiple))
+		if e.Verb == "" || e.Past == "" || e.PastParticiple == "" {
+			r.log.Warn(ctx, "verb.skip_invalid", logger.Field{Key: "verb", Value: e.Verb})
 			continue
 		}
 		if _, err := tx.Exec(ctx, insertVerbQuery, e.Original, e.Verb, e.Past, e.PastParticiple); err != nil {

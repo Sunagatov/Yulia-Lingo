@@ -28,11 +28,10 @@ var partsOfSpeech = []struct {
 type Handler struct {
 	repo      Repository
 	msgSource *i18n.MessageSource
-	log       logger.Logger
 }
 
 func NewHandler(repo Repository, msgSource *i18n.MessageSource, log logger.Logger) *Handler {
-	return &Handler{repo: repo, msgSource: msgSource, log: log}
+	return &Handler{repo: repo, msgSource: msgSource}
 }
 
 func (h *Handler) Command() string { return i18n.MsgLabelMyWordList }
