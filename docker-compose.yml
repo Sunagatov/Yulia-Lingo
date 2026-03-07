@@ -1,24 +1,17 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: yulia-lingo-postgres
-    env_file:
-      - .env
+    env_file: .env
     environment:
       POSTGRES_DB: ${POSTGRESQL_DATABASE_NAME:-yulia_lingo}
       POSTGRES_USER: ${POSTGRESQL_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "${POSTGRESQL_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    networks:
-      - yulia-lingo-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USER:-postgres} -d ${POSTGRESQL_DATABASE_NAME:-yulia_lingo}"]
       interval: 10s
@@ -28,54 +21,28 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /var/run/postgresql
 
   bot:
+    profiles: [bot]
     build:
       context: .
       dockerfile: Dockerfile
     container_name: yulia-lingo-bot
-    env_file:
-      - .env
+    env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       POSTGRESQL_HOST: postgres
       IRREGULAR_VERBS_FILE_PATH: /resource/nepravilnye-glagoly-295.xlsx
-    networks:
-      - yulia-lingo-network
-    healthcheck:
-      test: ["/yulia-lingo", "--health-check"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    read_only: true
-    tmpfs:
-      - /tmp
     deploy:
       resources:
         limits:
           memory: 256M
           cpus: '0.5'
-        reservations:
-          memory: 128M
-          cpus: '0.25'
 
 volumes:
   postgres_data:
-    driver: local
-
-networks:
-  yulia-lingo-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16

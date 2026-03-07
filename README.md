@@ -25,14 +25,14 @@
 
 ## Prerequisites
 
-- Go 1.21 or higher
-- PostgreSQL 13+
+- Go 1.26 or higher
+- PostgreSQL 17+
 - Docker and Docker Compose (optional)
 - Telegram Bot Token
 
 ## Tech Stack
 
-- **Language:** Go 1.21
+- **Language:** Go 1.26
 - **Architecture:** Clean Architecture with Dependency Injection
 - **Database:** PostgreSQL with connection pooling
 - **Telegram Bot API:** github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
@@ -177,7 +177,7 @@ The bot uses Telegram Bot API. Internal API documentation is available through c
 Please see our [Security Policy](SECURITY.md) for reporting security issues.
 
 ### What databases are supported?
-Currently, the application supports PostgreSQL 13+. The database layer is abstracted and can be extended for other databases.
+Currently, the application supports PostgreSQL 17+. The database layer is abstracted and can be extended for other databases.
 
 ## Community and Support
 

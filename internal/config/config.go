@@ -1,12 +1,9 @@
 package config
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -103,68 +100,26 @@ func Load() (*Config, error) {
 }
 
 func (c *Config) validate() error {
-	var missing []string
-
 	if c.Telegram.BotToken == "" {
-		missing = append(missing, "TELEGRAM_BOT_TOKEN")
+		return fmt.Errorf("missing required: TELEGRAM_BOT_TOKEN")
 	}
 	if c.Database.Password == "" {
-		missing = append(missing, "POSTGRESQL_PASSWORD")
+		return fmt.Errorf("missing required: POSTGRESQL_PASSWORD")
 	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf("missing required environment variables: %s", strings.Join(missing, ", "))
-	}
-
 	if c.Database.Port <= 0 || c.Database.Port > 65535 {
 		return fmt.Errorf("invalid database port: %d", c.Database.Port)
 	}
-
 	if c.Database.MaxConns < c.Database.MinConns {
-		return fmt.Errorf("max connections (%d) cannot be less than min connections (%d)", c.Database.MaxConns, c.Database.MinConns)
+		return fmt.Errorf("max_conns (%d) < min_conns (%d)", c.Database.MaxConns, c.Database.MinConns)
 	}
-
 	return nil
-}
-
-func (c *Config) GetIrregularVerbsFilePath(ctx context.Context) (string, error) {
-	filePath := c.App.IrregularVerbsFilePath
-	if filePath == "" {
-		filePath = filepath.Join("resource", "nepravilnye-glagoly-295.xlsx")
-	}
-
-	if !filepath.IsAbs(filePath) {
-		absPath, err := filepath.Abs(filePath)
-		if err != nil {
-			return "", fmt.Errorf("failed to resolve absolute path for irregular verbs file: %w", err)
-		}
-		filePath = absPath
-	}
-
-	select {
-	case <-ctx.Done():
-		return "", ctx.Err()
-	default:
-	}
-
-	if _, err := os.Stat(filePath); err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("irregular verbs file not found at path: %s", filePath)
-		}
-		return "", fmt.Errorf("failed to access irregular verbs file: %w", err)
-	}
-
-	return filePath, nil
 }
 
 func (c *Config) GetDatabaseURL() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		c.Database.User,
-		c.Database.Password,
-		c.Database.Host,
-		c.Database.Port,
-		c.Database.Name,
-		c.Database.SSLMode,
+		c.Database.User, c.Database.Password,
+		c.Database.Host, c.Database.Port,
+		c.Database.Name, c.Database.SSLMode,
 	)
 }
 

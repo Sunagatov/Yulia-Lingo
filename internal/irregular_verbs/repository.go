@@ -1,0 +1,174 @@
+package irregular_verbs
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"unicode"
+
+	"Yulia-Lingo/internal/config"
+	"Yulia-Lingo/internal/database"
+	"Yulia-Lingo/internal/logger"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/xuri/excelize/v2"
+)
+
+const (
+	getTotalCountQuery = "SELECT COUNT(*) FROM irregular_verbs WHERE verb LIKE $1 || '%'"
+	getPageQuery       = "SELECT id, original, verb, past, past_participle FROM irregular_verbs WHERE verb LIKE $1 || '%' ORDER BY verb LIMIT $2 OFFSET $3"
+	dropTableQuery     = "DROP TABLE IF EXISTS irregular_verbs CASCADE"
+	createTableQuery   = `
+		CREATE TABLE IF NOT EXISTS irregular_verbs (
+			id SERIAL PRIMARY KEY,
+			original VARCHAR(255) NOT NULL,
+			verb VARCHAR(255) NOT NULL UNIQUE,
+			past VARCHAR(255) NOT NULL,
+			past_participle VARCHAR(255) NOT NULL
+		)`
+	createIndexQuery = "CREATE INDEX IF NOT EXISTS idx_irregular_verbs_verb ON irregular_verbs(verb)"
+	insertVerbQuery  = "INSERT INTO irregular_verbs (original, verb, past, past_participle) VALUES ($1, $2, $3, $4) ON CONFLICT (verb) DO NOTHING"
+)
+
+type Repository interface {
+	GetTotalCount(ctx context.Context, letter string) (int, error)
+	GetPage(ctx context.Context, offset, limit int, letter string) ([]Entity, error)
+	Initialize(ctx context.Context) error
+}
+
+type repository struct {
+	cfg *config.Config
+	log logger.Logger
+}
+
+func NewRepository(cfg *config.Config, log logger.Logger) Repository {
+	return &repository{cfg: cfg, log: log}
+}
+
+func (r *repository) GetTotalCount(ctx context.Context, letter string) (int, error) {
+	if !isValidLetter(letter) {
+		return 0, fmt.Errorf("invalid letter: %q", letter)
+	}
+	db, err := database.GetDB()
+	if err != nil {
+		return 0, err
+	}
+	var count int
+	return count, db.QueryRow(ctx, getTotalCountQuery, strings.ToLower(letter)).Scan(&count)
+}
+
+func (r *repository) GetPage(ctx context.Context, offset, limit int, letter string) ([]Entity, error) {
+	if !isValidLetter(letter) {
+		return nil, fmt.Errorf("invalid letter: %q", letter)
+	}
+	db, err := database.GetDB()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(ctx, getPageQuery, strings.ToLower(letter), limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	defer rows.Close()
+
+	var entities []Entity
+	for rows.Next() {
+		var e Entity
+		if err := rows.Scan(&e.ID, &e.Original, &e.Verb, &e.Past, &e.PastParticiple); err != nil {
+			return nil, fmt.Errorf("scan failed: %w", err)
+		}
+		entities = append(entities, e)
+	}
+	return entities, rows.Err()
+}
+
+func (r *repository) Initialize(ctx context.Context) error {
+	db, err := database.GetDB()
+	if err != nil {
+		return err
+	}
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	for _, q := range []string{dropTableQuery, createTableQuery, createIndexQuery} {
+		if _, err := tx.Exec(ctx, q); err != nil {
+			return fmt.Errorf("exec %q: %w", q[:20], err)
+		}
+	}
+
+	if err := r.insertVerbsFromFile(ctx, tx); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func (r *repository) insertVerbsFromFile(ctx context.Context, tx pgx.Tx) error {
+	entities, err := r.readFromFile(ctx)
+	if err != nil {
+		return err
+	}
+	if len(entities) == 0 {
+		return fmt.Errorf("no irregular verbs found in file")
+	}
+	for _, e := range entities {
+		e.Sanitize()
+		if err := e.Validate(); err != nil {
+			r.log.Warn(ctx, "verb.skip_invalid",
+				logger.Field{Key: "verb", Value: e.Verb},
+				logger.Field{Key: "error", Value: err.Error()},
+			)
+			continue
+		}
+		if _, err := tx.Exec(ctx, insertVerbQuery, e.Original, e.Verb, e.Past, e.PastParticiple); err != nil {
+			return fmt.Errorf("insert %q: %w", e.Verb, err)
+		}
+	}
+	return nil
+}
+
+func (r *repository) readFromFile(ctx context.Context) ([]Entity, error) {
+	filePath := r.cfg.App.IrregularVerbsFilePath
+	if !filepath.IsAbs(filePath) {
+		abs, err := filepath.Abs(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("resolve path: %w", err)
+		}
+		filePath = abs
+	}
+	file, err := excelize.OpenFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("open excel: %w", err)
+	}
+	defer file.Close()
+
+	sheets := file.GetSheetList()
+	if len(sheets) == 0 {
+		return nil, fmt.Errorf("no sheets in excel file")
+	}
+	rows, err := file.GetRows(sheets[0])
+	if err != nil {
+		return nil, fmt.Errorf("get rows: %w", err)
+	}
+
+	var entities []Entity
+	for i, row := range rows {
+		if i == 0 || len(row) < 5 {
+			continue
+		}
+		if strings.TrimSpace(row[1]) == "" {
+			break
+		}
+		entities = append(entities, Entity{
+			Verb: row[1], Past: row[2], PastParticiple: row[3], Original: row[4],
+		})
+	}
+	r.log.Info(ctx, "verbs.loaded", logger.Field{Key: "count", Value: len(entities)})
+	return entities, nil
+}
+
+func isValidLetter(letter string) bool {
+	return len(letter) == 1 && unicode.IsLetter(rune(letter[0]))
+}
