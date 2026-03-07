@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"Yulia-Lingo/internal/database"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -35,20 +35,18 @@ type Repository interface {
 	Initialize(ctx context.Context) error
 }
 
-type repository struct{}
+type repository struct {
+	db *pgxpool.Pool
+}
 
-func NewRepository() Repository {
-	return &repository{}
+func NewRepository(db *pgxpool.Pool) Repository {
+	return &repository{db: db}
 }
 
 func (r *repository) GetCountsByPOS(ctx context.Context) (map[string]int, error) {
-	pool, err := database.GetDB()
+	rows, err := r.db.Query(ctx, getCountsQuery)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get db: %w", err)
-	}
-	rows, err := pool.Query(ctx, getCountsQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query counts: %w", err)
+		return nil, fmt.Errorf("query counts: %w", err)
 	}
 	defer rows.Close()
 	counts := make(map[string]int)
@@ -56,7 +54,7 @@ func (r *repository) GetCountsByPOS(ctx context.Context) (map[string]int, error)
 		var pos string
 		var count int
 		if err := rows.Scan(&pos, &count); err != nil {
-			return nil, fmt.Errorf("failed to scan: %w", err)
+			return nil, fmt.Errorf("scan: %w", err)
 		}
 		counts[pos] = count
 	}
@@ -64,20 +62,16 @@ func (r *repository) GetCountsByPOS(ctx context.Context) (map[string]int, error)
 }
 
 func (r *repository) GetPage(ctx context.Context, offset, limit int, partOfSpeech string) ([]Entity, error) {
-	pool, err := database.GetDB()
+	rows, err := r.db.Query(ctx, getPageQuery, partOfSpeech, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get db: %w", err)
-	}
-	rows, err := pool.Query(ctx, getPageQuery, partOfSpeech, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute query: %w", err)
+		return nil, fmt.Errorf("query page: %w", err)
 	}
 	defer rows.Close()
 	var entities []Entity
 	for rows.Next() {
 		var e Entity
 		if err := rows.Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Translation); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			return nil, fmt.Errorf("scan: %w", err)
 		}
 		entities = append(entities, e)
 	}
@@ -85,15 +79,10 @@ func (r *repository) GetPage(ctx context.Context, offset, limit int, partOfSpeec
 }
 
 func (r *repository) Initialize(ctx context.Context) error {
-	pool, err := database.GetDB()
-	if err != nil {
-		return fmt.Errorf("failed to get db: %w", err)
-	}
-	if _, err := pool.Exec(ctx, createWordsTableQuery); err != nil {
-		return fmt.Errorf("failed to create words table: %w", err)
-	}
-	if _, err := pool.Exec(ctx, createTranslationsTableQuery); err != nil {
-		return fmt.Errorf("failed to create translations table: %w", err)
+	for _, q := range []string{createWordsTableQuery, createTranslationsTableQuery} {
+		if _, err := r.db.Exec(ctx, q); err != nil {
+			return fmt.Errorf("exec schema: %w", err)
+		}
 	}
 	return nil
 }

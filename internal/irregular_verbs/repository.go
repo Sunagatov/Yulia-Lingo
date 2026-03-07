@@ -3,14 +3,15 @@ package irregular_verbs
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"unicode"
 
 	"Yulia-Lingo/internal/config"
-	"Yulia-Lingo/internal/database"
 	"Yulia-Lingo/internal/logger"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -37,35 +38,34 @@ type Repository interface {
 }
 
 type repository struct {
-	cfg *config.Config
-	log logger.Logger
+	db       *pgxpool.Pool
+	filePath string
+	log      logger.Logger
 }
 
-func NewRepository(cfg *config.Config, log logger.Logger) Repository {
-	return &repository{cfg: cfg, log: log}
+func NewRepository(db *pgxpool.Pool, cfg *config.Config, log logger.Logger) Repository {
+	filePath := cfg.App.IrregularVerbsFilePath
+	if !filepath.IsAbs(filePath) {
+		if abs, err := filepath.Abs(filePath); err == nil {
+			filePath = abs
+		}
+	}
+	return &repository{db: db, filePath: filePath, log: log}
 }
 
 func (r *repository) GetTotalCount(ctx context.Context, letter string) (int, error) {
 	if !isValidLetter(letter) {
 		return 0, fmt.Errorf("invalid letter: %q", letter)
 	}
-	db, err := database.GetDB()
-	if err != nil {
-		return 0, err
-	}
 	var count int
-	return count, db.QueryRow(ctx, getTotalCountQuery, strings.ToLower(letter)).Scan(&count)
+	return count, r.db.QueryRow(ctx, getTotalCountQuery, strings.ToLower(letter)).Scan(&count)
 }
 
 func (r *repository) GetPage(ctx context.Context, offset, limit int, letter string) ([]Entity, error) {
 	if !isValidLetter(letter) {
 		return nil, fmt.Errorf("invalid letter: %q", letter)
 	}
-	db, err := database.GetDB()
-	if err != nil {
-		return nil, err
-	}
-	rows, err := db.Query(ctx, getPageQuery, strings.ToLower(letter), limit, offset)
+	rows, err := r.db.Query(ctx, getPageQuery, strings.ToLower(letter), limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
@@ -83,11 +83,7 @@ func (r *repository) GetPage(ctx context.Context, offset, limit int, letter stri
 }
 
 func (r *repository) Initialize(ctx context.Context) error {
-	db, err := database.GetDB()
-	if err != nil {
-		return err
-	}
-	tx, err := db.Begin(ctx)
+	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -95,10 +91,9 @@ func (r *repository) Initialize(ctx context.Context) error {
 
 	for _, q := range []string{dropTableQuery, createTableQuery, createIndexQuery} {
 		if _, err := tx.Exec(ctx, q); err != nil {
-			return fmt.Errorf("exec %q: %w", q[:20], err)
+			return fmt.Errorf("exec schema: %w", err)
 		}
 	}
-
 	if err := r.insertVerbsFromFile(ctx, tx); err != nil {
 		return err
 	}
@@ -130,15 +125,7 @@ func (r *repository) insertVerbsFromFile(ctx context.Context, tx pgx.Tx) error {
 }
 
 func (r *repository) readFromFile(ctx context.Context) ([]Entity, error) {
-	filePath := r.cfg.App.IrregularVerbsFilePath
-	if !filepath.IsAbs(filePath) {
-		abs, err := filepath.Abs(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("resolve path: %w", err)
-		}
-		filePath = abs
-	}
-	file, err := excelize.OpenFile(filePath)
+	file, err := excelize.OpenFile(r.filePath)
 	if err != nil {
 		return nil, fmt.Errorf("open excel: %w", err)
 	}
@@ -161,9 +148,7 @@ func (r *repository) readFromFile(ctx context.Context) ([]Entity, error) {
 		if strings.TrimSpace(row[1]) == "" {
 			break
 		}
-		entities = append(entities, Entity{
-			Verb: row[1], Past: row[2], PastParticiple: row[3], Original: row[4],
-		})
+		entities = append(entities, Entity{Verb: row[1], Past: row[2], PastParticiple: row[3], Original: row[4]})
 	}
 	r.log.Info(ctx, "verbs.loaded", logger.Field{Key: "count", Value: len(entities)})
 	return entities, nil

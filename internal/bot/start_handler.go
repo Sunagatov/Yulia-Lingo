@@ -35,7 +35,7 @@ func (h *StartHandler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tg
 	)
 	keyboard.ResizeKeyboard = true
 
-	msg := ResponseFactory{}.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgWelcome, name), keyboard)
+	msg := NewMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgWelcome, name), keyboard)
 	if _, err := b.Send(msg); err != nil {
 		return fmt.Errorf("send start: %w", err)
 	}

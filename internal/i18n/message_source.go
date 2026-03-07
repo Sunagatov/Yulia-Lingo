@@ -18,7 +18,6 @@ func (l Lang) IsValid() bool {
 	return l == LangRU || l == LangEN
 }
 
-// Message keys as constants
 const (
 	MsgWelcome            = "welcome"
 	MsgHelp               = "help"
@@ -43,91 +42,59 @@ const (
 	MsgTranslateError     = "translate_error"
 	MsgConfirm            = "confirm"
 	MsgCancel             = "cancel"
-	MsgIrregularVerbsTitle  = "irregular_verbs_title"
-	MsgComingSoon           = "coming_soon"
-	MsgTranslationHeader    = "translation_header"
-	MsgTranslationEntry     = "translation_entry"
-	MsgLangRU               = "lang_ru"
-	MsgLangEN               = "lang_en"
-	MsgPosNoun              = "pos_noun"
-	MsgPosVerb              = "pos_verb"
-	MsgPosAdjective         = "pos_adjective"
-	MsgPosAdverb            = "pos_adverb"
-	MsgPosPreposition       = "pos_preposition"
-	MsgPosPronoun           = "pos_pronoun"
-	MsgLabelIrregularVerbs  = "label_irregular_verbs"
-	MsgLabelMyWordList      = "label_my_word_list"
-	MsgCmdStart             = "cmd_start"
-	MsgCmdHelp              = "cmd_help"
-	MsgCmdCancel            = "cmd_cancel"
-	MsgCmdLang              = "cmd_lang"
+	MsgIrregularVerbsTitle = "irregular_verbs_title"
+	MsgComingSoon          = "coming_soon"
+	MsgTranslationHeader   = "translation_header"
+	MsgTranslationEntry    = "translation_entry"
+	MsgLangRU              = "lang_ru"
+	MsgLangEN              = "lang_en"
+	MsgPosNoun             = "pos_noun"
+	MsgPosVerb             = "pos_verb"
+	MsgPosAdjective        = "pos_adjective"
+	MsgPosAdverb           = "pos_adverb"
+	MsgPosPreposition      = "pos_preposition"
+	MsgPosPronoun          = "pos_pronoun"
+	MsgLabelIrregularVerbs = "label_irregular_verbs"
+	MsgLabelMyWordList     = "label_my_word_list"
+	MsgCmdStart            = "cmd_start"
+	MsgCmdHelp             = "cmd_help"
+	MsgCmdCancel           = "cmd_cancel"
+	MsgCmdLang             = "cmd_lang"
 )
 
-// SupportedLangs lists all languages for iterating label variants
 var SupportedLangs = []Lang{LangRU, LangEN}
 
 type MessageSource struct {
 	messages map[Lang]map[string]string
 }
 
-func NewMessageSource() *MessageSource {
-	return &MessageSource{
-		messages: make(map[Lang]map[string]string),
-	}
-}
-
-func (ms *MessageSource) LoadFromFile(lang Lang, filePath string) error {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to read file %s: %w", filePath, err)
-	}
-	
-	var messages map[string]string
-	if err := json.Unmarshal(data, &messages); err != nil {
-		return fmt.Errorf("failed to unmarshal JSON: %w", err)
-	}
-	
-	ms.messages[lang] = messages
-	return nil
-}
-
-func (ms *MessageSource) LoadFromDir(dirPath string) error {
-	files := map[Lang]string{
-		LangRU: filepath.Join(dirPath, "ru.json"),
-		LangEN: filepath.Join(dirPath, "en.json"),
-	}
-	
-	for lang, file := range files {
-		if err := ms.LoadFromFile(lang, file); err != nil {
-			return err
+func NewMessageSource(dir string) (*MessageSource, error) {
+	ms := &MessageSource{messages: make(map[Lang]map[string]string)}
+	for _, lang := range SupportedLangs {
+		data, err := os.ReadFile(filepath.Join(dir, string(lang)+".json"))
+		if err != nil {
+			return nil, fmt.Errorf("read i18n %s: %w", lang, err)
 		}
+		var msgs map[string]string
+		if err := json.Unmarshal(data, &msgs); err != nil {
+			return nil, fmt.Errorf("parse i18n %s: %w", lang, err)
+		}
+		ms.messages[lang] = msgs
 	}
-	
-	return nil
+	return ms, nil
 }
 
-func (ms *MessageSource) Get(lang Lang, key string, args ...interface{}) string {
+func (ms *MessageSource) Get(lang Lang, key string, args ...any) string {
 	if !lang.IsValid() {
 		lang = LangRU
 	}
-	
-	if langMessages, ok := ms.messages[lang]; ok {
-		if msg, ok := langMessages[key]; ok {
+	if msgs, ok := ms.messages[lang]; ok {
+		if msg, ok := msgs[key]; ok {
 			if len(args) > 0 {
 				return fmt.Sprintf(msg, args...)
 			}
 			return msg
 		}
 	}
-	
-	// Fallback: return key itself
 	return key
-}
-
-func (ms *MessageSource) Has(lang Lang, key string) bool {
-	if langMessages, ok := ms.messages[lang]; ok {
-		_, ok := langMessages[key]
-		return ok
-	}
-	return false
 }

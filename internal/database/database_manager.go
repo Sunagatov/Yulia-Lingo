@@ -11,12 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var pool *pgxpool.Pool
-
-func Initialize(ctx context.Context, cfg *config.Config, log logger.Logger) error {
+func Connect(ctx context.Context, cfg *config.Config, log logger.Logger) (*pgxpool.Pool, error) {
 	poolConfig, err := pgxpool.ParseConfig(cfg.GetDatabaseURL())
 	if err != nil {
-		return fmt.Errorf("parse db config: %w", err)
+		return nil, fmt.Errorf("parse db config: %w", err)
 	}
 	poolConfig.MaxConns = int32(cfg.Database.MaxConns)
 	poolConfig.MinConns = int32(cfg.Database.MinConns)
@@ -28,41 +26,17 @@ func Initialize(ctx context.Context, cfg *config.Config, log logger.Logger) erro
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	p, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
-		return fmt.Errorf("create pool: %w", err)
+		return nil, fmt.Errorf("create pool: %w", err)
 	}
-	if err := p.Ping(ctx); err != nil {
-		p.Close()
-		return fmt.Errorf("ping db: %w", err)
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("ping db: %w", err)
 	}
-	pool = p
-	log.Info(ctx, "db.pool_established",
+	log.Info(ctx, "db.connected",
 		logger.Field{Key: "max_conns", Value: cfg.Database.MaxConns},
 		logger.Field{Key: "min_conns", Value: cfg.Database.MinConns},
 	)
-	return nil
-}
-
-func GetDB() (*pgxpool.Pool, error) {
-	if pool == nil {
-		return nil, fmt.Errorf("database not initialized")
-	}
 	return pool, nil
-}
-
-func Close() {
-	if pool != nil {
-		pool.Close()
-	}
-}
-
-func HealthCheck(ctx context.Context) error {
-	p, err := GetDB()
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	return p.Ping(ctx)
 }

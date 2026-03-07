@@ -5,9 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"Yulia-Lingo/internal/database"
-
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -28,46 +27,36 @@ type Repository interface {
 	GetLanguage(ctx context.Context, userID int64) (string, error)
 }
 
-type repository struct{}
+type repository struct {
+	db *pgxpool.Pool
+}
 
-func NewRepository() Repository {
-	return &repository{}
+func NewRepository(db *pgxpool.Pool) Repository {
+	return &repository{db: db}
 }
 
 func (r *repository) Initialize(ctx context.Context) error {
-	db, err := database.GetDB()
-	if err != nil {
-		return fmt.Errorf("failed to get db: %w", err)
-	}
-	if _, err := db.Exec(ctx, createTableQuery); err != nil {
-		return fmt.Errorf("failed to create user_preferences table: %w", err)
+	if _, err := r.db.Exec(ctx, createTableQuery); err != nil {
+		return fmt.Errorf("create user_preferences table: %w", err)
 	}
 	return nil
 }
 
 func (r *repository) SetLanguage(ctx context.Context, userID int64, lang string) error {
-	db, err := database.GetDB()
-	if err != nil {
-		return fmt.Errorf("failed to get db: %w", err)
-	}
-	if _, err := db.Exec(ctx, upsertLangQuery, userID, lang); err != nil {
-		return fmt.Errorf("failed to upsert language: %w", err)
+	if _, err := r.db.Exec(ctx, upsertLangQuery, userID, lang); err != nil {
+		return fmt.Errorf("upsert language: %w", err)
 	}
 	return nil
 }
 
 func (r *repository) GetLanguage(ctx context.Context, userID int64) (string, error) {
-	db, err := database.GetDB()
-	if err != nil {
-		return "", fmt.Errorf("failed to get db: %w", err)
-	}
 	var lang string
-	err = db.QueryRow(ctx, getLangQuery, userID).Scan(&lang)
+	err := r.db.QueryRow(ctx, getLangQuery, userID).Scan(&lang)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("failed to get language: %w", err)
+		return "", fmt.Errorf("get language: %w", err)
 	}
 	return lang, nil
 }

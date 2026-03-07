@@ -25,12 +25,11 @@ const (
 type Handler struct {
 	repo      Repository
 	msgSource *i18n.MessageSource
-	factory   bot.ResponseFactory
 	log       logger.Logger
 }
 
-func NewHandler(repo Repository, msgSource *i18n.MessageSource, factory bot.ResponseFactory, log logger.Logger) *Handler {
-	return &Handler{repo: repo, msgSource: msgSource, factory: factory, log: log}
+func NewHandler(repo Repository, msgSource *i18n.MessageSource, log logger.Logger) *Handler {
+	return &Handler{repo: repo, msgSource: msgSource, log: log}
 }
 
 func (h *Handler) Command() string { return i18n.MsgLabelIrregularVerbs }
@@ -38,7 +37,7 @@ func (h *Handler) Command() string { return i18n.MsgLabelIrregularVerbs }
 func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *bot.UserSession) error {
 	lang := session.Lang()
 	keyboard := h.buildLetterKeyboard(session.GetActiveLetter())
-	msg := h.factory.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChooseLetter), &keyboard)
+	msg := bot.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChooseLetter), &keyboard)
 	_, err := b.Send(msg)
 	return err
 }
@@ -62,7 +61,7 @@ func (h *Handler) HandleVerbPage(ctx context.Context, b *tgbotapi.BotAPI, query 
 func (h *Handler) HandleVerbBack(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
 	lang := session.Lang()
 	keyboard := h.buildLetterKeyboard(session.GetActiveLetter())
-	msg := h.factory.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgChooseLetter), &keyboard)
+	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgChooseLetter), &keyboard)
 	_, err := b.Send(msg)
 	return err
 }
@@ -79,7 +78,7 @@ func (h *Handler) showPage(ctx context.Context, b *tgbotapi.BotAPI, query *tgbot
 	}
 	text := h.buildText(letter, verbs, page, total, lang)
 	keyboard := h.buildNavKeyboard(letter, page, total, lang)
-	msg := h.factory.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &keyboard)
+	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &keyboard)
 	_, err = b.Send(msg)
 	return err
 }

@@ -25,12 +25,11 @@ const (
 type Handler struct {
 	client    APIClient
 	msgSource *i18n.MessageSource
-	factory   bot.ResponseFactory
 	log       logger.Logger
 }
 
-func NewHandler(client APIClient, msgSource *i18n.MessageSource, factory bot.ResponseFactory, log logger.Logger) *Handler {
-	return &Handler{client: client, msgSource: msgSource, factory: factory, log: log}
+func NewHandler(client APIClient, msgSource *i18n.MessageSource, log logger.Logger) *Handler {
+	return &Handler{client: client, msgSource: msgSource, log: log}
 }
 
 func (h *Handler) Command() string { return "default" }
@@ -41,7 +40,7 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 	lang := session.Lang()
 
 	if !util.IsValidEnglishWord(text) {
-		msg := h.factory.NewTextMessage(chatID, h.msgSource.Get(lang, i18n.MsgInvalidWord))
+		msg := bot.NewTextMessage(chatID, h.msgSource.Get(lang, i18n.MsgInvalidWord))
 		_, err := b.Send(msg)
 		return err
 	}
@@ -49,12 +48,12 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 	result, err := h.client.Translate(ctx, text, string(lang))
 	if err != nil {
 		h.log.Error(ctx, "translate.failed", err, logger.Field{Key: "word", Value: text})
-		msg := h.factory.NewTextMessage(chatID, h.msgSource.Get(lang, i18n.MsgTranslateError))
+		msg := bot.NewTextMessage(chatID, h.msgSource.Get(lang, i18n.MsgTranslateError))
 		_, err = b.Send(msg)
 		return err
 	}
 
-	msg := h.factory.NewTextMessageWithKeyboard(chatID, h.buildText(text, result, lang), h.buildActionKeyboard(text, lang))
+	msg := bot.NewTextMessageWithKeyboard(chatID, h.buildText(text, result, lang), h.buildActionKeyboard(text, lang))
 	_, sendErr := b.Send(msg)
 	return sendErr
 }
@@ -67,7 +66,7 @@ func (h *Handler) HandleWordSave(ctx context.Context, b *tgbotapi.BotAPI, query 
 			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgCancel), CallbackWordCancel),
 		),
 	)
-	msg := h.factory.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, fmt.Sprintf(h.msgSource.Get(lang, i18n.MsgConfirmSave), word), &keyboard)
+	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, fmt.Sprintf(h.msgSource.Get(lang, i18n.MsgConfirmSave), word), &keyboard)
 	_, err := b.Send(msg)
 	return err
 }
@@ -75,14 +74,14 @@ func (h *Handler) HandleWordSave(ctx context.Context, b *tgbotapi.BotAPI, query 
 func (h *Handler) HandleWordConfirm(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, word string, session *bot.UserSession) error {
 	lang := session.Lang()
 	h.log.Info(ctx, "word.saved", logger.Field{Key: "user_id", Value: query.From.ID})
-	msg := h.factory.NewEditMessage(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgWordSaved, word))
+	msg := bot.NewEditMessage(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgWordSaved, word))
 	_, err := b.Send(msg)
 	return err
 }
 
 func (h *Handler) HandleWordCancel(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
 	lang := session.Lang()
-	msg := h.factory.NewEditMessage(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgCancelled))
+	msg := bot.NewEditMessage(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgCancelled))
 	_, err := b.Send(msg)
 	return err
 }

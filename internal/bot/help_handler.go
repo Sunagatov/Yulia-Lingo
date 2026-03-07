@@ -21,7 +21,7 @@ func NewHelpHandler(msgSource *i18n.MessageSource, log logger.Logger) *HelpHandl
 func (h *HelpHandler) Command() string { return "/help" }
 
 func (h *HelpHandler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *UserSession) error {
-	msg := ResponseFactory{}.NewTextMessage(update.Message.Chat.ID, h.msgSource.Get(session.Lang(), i18n.MsgHelp))
+	msg := NewMessage(update.Message.Chat.ID, h.msgSource.Get(session.Lang(), i18n.MsgHelp))
 	_, err := b.Send(msg)
 	return err
 }

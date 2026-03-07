@@ -52,9 +52,9 @@ var allKeys = []string{
 
 func newTestSource(t *testing.T) *i18n.MessageSource {
 	t.Helper()
-	ms := i18n.NewMessageSource()
-	if err := ms.LoadFromDir("../../resource/i18n"); err != nil {
-		t.Fatalf("failed to load i18n files: %v", err)
+	ms, err := i18n.NewMessageSource("../../resource/i18n")
+	if err != nil {
+		t.Fatalf("failed to load i18n: %v", err)
 	}
 	return ms
 }

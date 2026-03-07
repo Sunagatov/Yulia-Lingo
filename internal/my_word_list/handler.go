@@ -28,12 +28,11 @@ var partsOfSpeech = []struct {
 type Handler struct {
 	repo      Repository
 	msgSource *i18n.MessageSource
-	factory   bot.ResponseFactory
 	log       logger.Logger
 }
 
-func NewHandler(repo Repository, msgSource *i18n.MessageSource, factory bot.ResponseFactory, log logger.Logger) *Handler {
-	return &Handler{repo: repo, msgSource: msgSource, factory: factory, log: log}
+func NewHandler(repo Repository, msgSource *i18n.MessageSource, log logger.Logger) *Handler {
+	return &Handler{repo: repo, msgSource: msgSource, log: log}
 }
 
 func (h *Handler) Command() string { return i18n.MsgLabelMyWordList }
@@ -42,7 +41,7 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 	lang := session.Lang()
 	counts, _ := h.repo.GetCountsByPOS(ctx)
 	keyboard := h.buildPosKeyboard(lang, "", counts)
-	msg := h.factory.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChoosePartOfSpeech), &keyboard)
+	msg := bot.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChoosePartOfSpeech), &keyboard)
 	_, err := b.Send(msg)
 	return err
 }
@@ -52,7 +51,7 @@ func (h *Handler) HandleWordPos(ctx context.Context, b *tgbotapi.BotAPI, query *
 	counts, _ := h.repo.GetCountsByPOS(ctx)
 	keyboard := h.buildPosKeyboard(lang, data, counts)
 	text := fmt.Sprintf("*%s*\n\n%s", h.posLabel(lang, data), h.msgSource.Get(lang, i18n.MsgComingSoon))
-	msg := h.factory.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &keyboard)
+	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &keyboard)
 	_, err := b.Send(msg)
 	return err
 }

@@ -4,30 +4,26 @@ import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 const parseMode = "Markdown"
 
-type ResponseFactory struct{}
-
-func (ResponseFactory) NewTextMessage(chatID int64, text string) tgbotapi.MessageConfig {
+func NewMessage(chatID int64, text string) tgbotapi.MessageConfig {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = parseMode
 	return msg
 }
 
-func (ResponseFactory) NewTextMessageWithKeyboard(chatID int64, text string, keyboard interface{}) tgbotapi.MessageConfig {
-	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ParseMode = parseMode
+func NewMessageWithKeyboard(chatID int64, text string, keyboard interface{}) tgbotapi.MessageConfig {
+	msg := NewMessage(chatID, text)
 	msg.ReplyMarkup = keyboard
 	return msg
 }
 
-func (ResponseFactory) NewEditMessage(chatID int64, messageID int, text string) tgbotapi.EditMessageTextConfig {
+func NewEditMessage(chatID int64, messageID int, text string) tgbotapi.EditMessageTextConfig {
 	msg := tgbotapi.NewEditMessageText(chatID, messageID, text)
 	msg.ParseMode = parseMode
 	return msg
 }
 
-func (ResponseFactory) NewEditMessageWithKeyboard(chatID int64, messageID int, text string, keyboard *tgbotapi.InlineKeyboardMarkup) tgbotapi.EditMessageTextConfig {
-	msg := tgbotapi.NewEditMessageText(chatID, messageID, text)
-	msg.ParseMode = parseMode
+func NewEditMessageWithKeyboard(chatID int64, messageID int, text string, keyboard *tgbotapi.InlineKeyboardMarkup) tgbotapi.EditMessageTextConfig {
+	msg := NewEditMessage(chatID, messageID, text)
 	msg.ReplyMarkup = keyboard
 	return msg
 }

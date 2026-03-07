@@ -16,12 +16,11 @@ const CallbackLang = bot.CallbackPrefixLang
 type Handler struct {
 	repo      Repository
 	msgSource *i18n.MessageSource
-	factory   bot.ResponseFactory
 	log       logger.Logger
 }
 
-func NewHandler(repo Repository, msgSource *i18n.MessageSource, factory bot.ResponseFactory, log logger.Logger) *Handler {
-	return &Handler{repo: repo, msgSource: msgSource, factory: factory, log: log}
+func NewHandler(repo Repository, msgSource *i18n.MessageSource, log logger.Logger) *Handler {
+	return &Handler{repo: repo, msgSource: msgSource, log: log}
 }
 
 func (h *Handler) Command() string { return "/lang" }
@@ -29,7 +28,7 @@ func (h *Handler) Command() string { return "/lang" }
 func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *bot.UserSession) error {
 	lang := session.Lang()
 	keyboard := h.buildKeyboard(lang)
-	msg := h.factory.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChooseLanguage), &keyboard)
+	msg := bot.NewTextMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChooseLanguage), &keyboard)
 	_, err := b.Send(msg)
 	return err
 }
@@ -44,7 +43,7 @@ func (h *Handler) HandleLang(ctx context.Context, b *tgbotapi.BotAPI, query *tgb
 		h.log.Warn(ctx, "lang.persist_failed", logger.Field{Key: "user_id", Value: query.From.ID})
 	}
 	keyboard := h.buildKeyboard(newLang)
-	msg := h.factory.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(newLang, i18n.MsgLanguageSet), &keyboard)
+	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(newLang, i18n.MsgLanguageSet), &keyboard)
 	_, err := b.Send(msg)
 	return err
 }
