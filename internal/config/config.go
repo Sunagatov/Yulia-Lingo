@@ -42,8 +42,6 @@ type TelegramConfig struct {
 
 type TranslateConfig struct {
 	APIURL  string
-	APIKey  string
-	APIHost string
 	Timeout time.Duration
 }
 
@@ -85,9 +83,7 @@ func Load() (*Config, error) {
 			UpdateHandlerTimeout: getEnvDuration("TELEGRAM_UPDATE_HANDLER_TIMEOUT", 30*time.Second),
 		},
 		Translate: TranslateConfig{
-			APIURL:  getEnv("TRANSLATE_API_URL", ""),
-			APIKey:  getEnv("TRANSLATE_API_KEY", ""),
-			APIHost: getEnv("TRANSLATE_API_HOST", ""),
+			APIURL:  getEnv("TRANSLATE_API_URL", "https://lingva.ml"),
 			Timeout: getEnvDuration("TRANSLATE_API_TIMEOUT", 10*time.Second),
 		},
 		Logging: LoggingConfig{

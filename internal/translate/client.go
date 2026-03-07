@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 	"unicode"
 
@@ -18,33 +17,23 @@ import (
 
 const (
 	maxResponseSize = 1024 * 1024
-	defaultAPIURL   = "https://api.mymemory.translated.net/get"
 	maxRetries      = 3
 	maxWordLength   = 50
 )
-
-var allowedHosts = map[string]bool{
-	"api.mymemory.translated.net": true,
-	"translate.googleapis.com":    true,
-}
 
 type APIClient interface {
 	Translate(ctx context.Context, word string, targetLang string) (Translation, error)
 }
 
 type client struct {
-	apiURL  string
-	apiKey  string
-	apiHost string
+	baseURL    string
 	httpClient *http.Client
 	log        logger.Logger
 }
 
 func NewAPIClient(cfg *config.Config, log logger.Logger) APIClient {
 	return &client{
-		apiURL:  cfg.Translate.APIURL,
-		apiKey:  cfg.Translate.APIKey,
-		apiHost: cfg.Translate.APIHost,
+		baseURL: cfg.Translate.APIURL,
 		log:     log,
 		httpClient: &http.Client{
 			Timeout: cfg.Translate.Timeout,
@@ -61,7 +50,9 @@ func (c *client) Translate(ctx context.Context, word string, targetLang string) 
 	if !isValidWord(word) {
 		return Translation{}, fmt.Errorf("invalid word: %s", word)
 	}
-	word = strings.TrimSpace(word)
+	if targetLang == "" {
+		targetLang = string(i18n.LangRU)
+	}
 
 	var lastErr error
 	for attempt := range maxRetries {
@@ -88,23 +79,20 @@ func (c *client) Translate(ctx context.Context, word string, targetLang string) 
 }
 
 func (c *client) doTranslate(ctx context.Context, word, targetLang string) (Translation, error) {
-	reqURL, err := c.buildURL(word, targetLang)
-	if err != nil {
-		return Translation{}, err
-	}
+	// Lingva API: GET /api/v1/{source}/{target}/{query}
+	reqURL := fmt.Sprintf("%s/api/v1/%s/%s/%s",
+		c.baseURL,
+		string(i18n.LangEN),
+		targetLang,
+		url.PathEscape(word),
+	)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
-		return Translation{}, fmt.Errorf("failed to create request: %w", err)
+		return Translation{}, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("User-Agent", "Yulia-Lingo/1.0")
 	req.Header.Set("Accept", "application/json")
-	if c.apiKey != "" {
-		req.Header.Set("X-RapidAPI-Key", c.apiKey)
-	}
-	if c.apiHost != "" {
-		req.Header.Set("X-RapidAPI-Host", c.apiHost)
-	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -118,43 +106,45 @@ func (c *client) doTranslate(ctx context.Context, word, targetLang string) (Tran
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
-		return Translation{}, fmt.Errorf("failed to read body: %w", err)
+		return Translation{}, fmt.Errorf("read body: %w", err)
 	}
 
+	// Lingva response shape:
+	// {"translation":"...","info":{"definitions":[{"type":"noun","list":["...","..."]}]}}
 	var apiResp struct {
-		ResponseData struct {
-			TranslatedText string `json:"translatedText"`
-		} `json:"responseData"`
-		Matches json.RawMessage `json:"matches"`
+		Translation string `json:"translation"`
+		Info        struct {
+			Definitions []struct {
+				List []string `json:"list"`
+			} `json:"definitions"`
+		} `json:"info"`
 	}
 	if err := json.Unmarshal(body, &apiResp); err != nil {
-		return Translation{}, fmt.Errorf("failed to parse response: %w", err)
+		return Translation{}, fmt.Errorf("parse response: %w", err)
 	}
-	var matches []struct {
-		Translation string `json:"translation"`
-	}
-	// matches is sometimes a string instead of array (MyMemory API quirk)
-	_ = json.Unmarshal(apiResp.Matches, &matches)
 
 	seen := map[string]bool{}
 	var terms []string
-	addTerm := func(t string) {
+	add := func(t string) {
 		if t != "" && !seen[t] {
 			seen[t] = true
 			terms = append(terms, t)
 		}
 	}
-	addTerm(apiResp.ResponseData.TranslatedText)
-	for _, m := range matches {
-		if len(terms) >= 3 {
-			break
+
+	add(apiResp.Translation)
+	for _, def := range apiResp.Info.Definitions {
+		for _, term := range def.List {
+			if len(terms) >= maxTranslations {
+				break
+			}
+			add(term)
 		}
-		addTerm(m.Translation)
 	}
+
 	if len(terms) == 0 {
 		return Translation{}, fmt.Errorf("no translation found for %q", word)
 	}
-
 	return Translation{Terms: terms}, nil
 }
 
@@ -168,23 +158,4 @@ func isValidWord(word string) bool {
 		}
 	}
 	return true
-}
-
-func (c *client) buildURL(word, targetLang string) (string, error) {
-	base := c.apiURL
-	if base == "" {
-		base = defaultAPIURL
-	}
-	u, err := url.Parse(base)
-	if err != nil {
-		return "", fmt.Errorf("invalid API URL: %w", err)
-	}
-	if !allowedHosts[u.Host] {
-		return "", fmt.Errorf("host not allowed: %s", u.Host)
-	}
-	if targetLang == "" {
-		targetLang = string(i18n.LangRU)
-	}
-	u.RawQuery = url.Values{"q": {word}, "langpair": {string(i18n.LangEN) + "|" + targetLang}}.Encode()
-	return u.String(), nil
 }
