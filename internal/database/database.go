@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"Yulia-Lingo/internal/config"
 	"Yulia-Lingo/internal/logger"
@@ -25,10 +24,10 @@ func Connect(ctx context.Context, cfg *config.Config, log logger.Logger) (*pgxpo
 	poolConfig.MinConns = int32(cfg.Database.MinConns)
 	poolConfig.MaxConnLifetime = cfg.Database.MaxConnLifetime
 	poolConfig.MaxConnIdleTime = cfg.Database.MaxConnIdleTime
-	poolConfig.ConnConfig.ConnectTimeout = 10 * time.Second
-	poolConfig.ConnConfig.RuntimeParams = map[string]string{"application_name": "yulia-lingo"}
+	poolConfig.ConnConfig.ConnectTimeout = cfg.Database.ConnectTimeout
+	poolConfig.ConnConfig.RuntimeParams = map[string]string{"application_name": cfg.Database.ApplicationName}
 
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, cfg.Database.PingTimeout)
 	defer cancel()
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)

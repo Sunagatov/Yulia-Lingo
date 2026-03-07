@@ -17,7 +17,6 @@ import (
 const (
 	getTotalCountQuery = "SELECT COUNT(*) FROM irregular_verbs WHERE verb LIKE $1 || '%'"
 	getPageQuery       = "SELECT id, original, verb, past, past_participle FROM irregular_verbs WHERE verb LIKE $1 || '%' ORDER BY verb LIMIT $2 OFFSET $3"
-	dropTableQuery     = "DROP TABLE IF EXISTS irregular_verbs CASCADE"
 	createTableQuery   = `
 		CREATE TABLE IF NOT EXISTS irregular_verbs (
 			id SERIAL PRIMARY KEY,
@@ -87,13 +86,20 @@ func (r *repository) Initialize(ctx context.Context) error {
 	}
 	defer tx.Rollback(ctx)
 
-	for _, q := range []string{dropTableQuery, createTableQuery, createIndexQuery} {
+	for _, q := range []string{createTableQuery, createIndexQuery} {
 		if _, err := tx.Exec(ctx, q); err != nil {
 			return fmt.Errorf("exec schema: %w", err)
 		}
 	}
-	if err := r.insertVerbsFromFile(ctx, tx); err != nil {
-		return err
+
+	var count int
+	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM irregular_verbs").Scan(&count); err != nil {
+		return fmt.Errorf("count verbs: %w", err)
+	}
+	if count == 0 {
+		if err := r.insertVerbsFromFile(ctx, tx); err != nil {
+			return err
+		}
 	}
 	return tx.Commit(ctx)
 }

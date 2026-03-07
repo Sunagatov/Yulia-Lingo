@@ -1,8 +1,17 @@
+networks:
+  yulia-lingo-network:
+    name: yulia-lingo-network
+
+volumes:
+  postgres-data:
+
 services:
+
+  # ── Infrastructure (always available) ──────────────────────────────────────
+
   postgres:
     image: postgres:17-alpine
     container_name: yulia-lingo-postgres
-    env_file: .env
     environment:
       POSTGRES_DB: ${POSTGRESQL_DATABASE_NAME:-yulia_lingo}
       POSTGRES_USER: ${POSTGRESQL_USER:-postgres}
@@ -10,39 +19,43 @@ services:
     ports:
       - "${POSTGRESQL_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - yulia-lingo-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USER:-postgres} -d ${POSTGRESQL_DATABASE_NAME:-yulia_lingo}"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
+
+  # ── Bot (profile: bot) ─────────────────────────────────────────────────────
 
   bot:
-    profiles: [bot]
     build:
       context: .
       dockerfile: Dockerfile
     container_name: yulia-lingo-bot
-    env_file: .env
+    profiles: [bot]
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      POSTGRESQL_HOST: postgres
+      POSTGRESQL_PORT: ${POSTGRESQL_PORT:-5432}
+      POSTGRESQL_USER: ${POSTGRESQL_USER:-postgres}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRESQL_DATABASE_NAME: ${POSTGRESQL_DATABASE_NAME:-yulia_lingo}
+      IRREGULAR_VERBS_FILE_PATH: /resource/nepravilnye-glagoly-295.xlsx
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      POSTGRESQL_HOST: postgres
-      IRREGULAR_VERBS_FILE_PATH: /resource/nepravilnye-glagoly-295.xlsx
+    networks:
+      - yulia-lingo-network
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
     deploy:
       resources:
         limits:
           memory: 256M
           cpus: '0.5'
-
-volumes:
-  postgres_data:

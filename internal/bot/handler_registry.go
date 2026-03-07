@@ -13,15 +13,8 @@ type CommandHandler interface {
 	Handle(ctx context.Context, bot *tgbotapi.BotAPI, update tgbotapi.Update, session *UserSession) error
 }
 
-type StatefulHandler interface {
-	CommandHandler
-	HandledStates() []BotState
-	HandleState(ctx context.Context, bot *tgbotapi.BotAPI, update tgbotapi.Update, session *UserSession) error
-}
-
 type HandlerRegistry struct {
 	commands      map[string]CommandHandler
-	stateful      []StatefulHandler
 	replyKeyboard map[string]string
 	msgSource     *i18n.MessageSource
 }
@@ -36,9 +29,6 @@ func NewHandlerRegistry(msgSource *i18n.MessageSource) *HandlerRegistry {
 
 func (r *HandlerRegistry) Register(handler CommandHandler) {
 	r.commands[handler.Command()] = handler
-	if sh, ok := handler.(StatefulHandler); ok {
-		r.stateful = append(r.stateful, sh)
-	}
 }
 
 func (r *HandlerRegistry) RegisterReplyKeyboard(label, command string) {
@@ -53,7 +43,7 @@ func (r *HandlerRegistry) Route(ctx context.Context, bot *tgbotapi.BotAPI, updat
 	}
 	text := update.Message.Text
 
-	if text == "/cancel" {
+	if text == "/"+CmdCancel {
 		return r.handleCancel(ctx, bot, update, session)
 	}
 	if handler, ok := r.commands[text]; ok {
@@ -64,16 +54,7 @@ func (r *HandlerRegistry) Route(ctx context.Context, bot *tgbotapi.BotAPI, updat
 			return handler.Handle(ctx, bot, update, session)
 		}
 	}
-	if session.State() != StateIdle {
-		for _, sh := range r.stateful {
-			for _, state := range sh.HandledStates() {
-				if state == session.State() {
-					return sh.HandleState(ctx, bot, update, session)
-				}
-			}
-		}
-	}
-	if handler, ok := r.commands["default"]; ok {
+	if handler, ok := r.commands[CmdDefault]; ok {
 		return handler.Handle(ctx, bot, update, session)
 	}
 	return nil

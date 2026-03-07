@@ -28,12 +28,16 @@ type DatabaseConfig struct {
 	MaxConnLifetime time.Duration
 	MaxConnIdleTime time.Duration
 	SSLMode         string
+	ConnectTimeout  time.Duration
+	PingTimeout     time.Duration
+	ApplicationName string
 }
 
 type TelegramConfig struct {
-	BotToken           string
-	MaxConcurrentUsers int
-	Timeout            time.Duration
+	BotToken              string
+	MaxConcurrentUsers    int
+	Timeout               time.Duration
+	UpdateHandlerTimeout  time.Duration
 }
 
 type TranslateConfig struct {
@@ -50,6 +54,7 @@ type LoggingConfig struct {
 
 type AppConfig struct {
 	IrregularVerbsFilePath string
+	I18nDir                string
 }
 
 func Load() (*Config, error) {
@@ -69,11 +74,15 @@ func Load() (*Config, error) {
 			MaxConnLifetime: getEnvDuration("DB_MAX_CONN_LIFETIME", time.Hour),
 			MaxConnIdleTime: getEnvDuration("DB_MAX_CONN_IDLE_TIME", 30*time.Minute),
 			SSLMode:         getEnv("DB_SSL_MODE", "disable"),
+			ConnectTimeout:  getEnvDuration("DB_CONNECT_TIMEOUT", 10*time.Second),
+			PingTimeout:     getEnvDuration("DB_PING_TIMEOUT", 30*time.Second),
+			ApplicationName: getEnv("DB_APPLICATION_NAME", "yulia-lingo"),
 		},
 		Telegram: TelegramConfig{
-			BotToken:           getEnv("TELEGRAM_BOT_TOKEN", ""),
-			MaxConcurrentUsers: getEnvInt("TELEGRAM_MAX_CONCURRENT_USERS", 100),
-			Timeout:            getEnvDuration("TELEGRAM_TIMEOUT", 60*time.Second),
+			BotToken:             getEnv("TELEGRAM_BOT_TOKEN", ""),
+			MaxConcurrentUsers:   getEnvInt("TELEGRAM_MAX_CONCURRENT_USERS", 100),
+			Timeout:              getEnvDuration("TELEGRAM_TIMEOUT", 60*time.Second),
+			UpdateHandlerTimeout: getEnvDuration("TELEGRAM_UPDATE_HANDLER_TIMEOUT", 30*time.Second),
 		},
 		Translate: TranslateConfig{
 			APIURL:  getEnv("TRANSLATE_API_URL", ""),
@@ -87,6 +96,7 @@ func Load() (*Config, error) {
 		},
 		App: AppConfig{
 			IrregularVerbsFilePath: getEnv("IRREGULAR_VERBS_FILE_PATH", "resource/nepravilnye-glagoly-295.xlsx"),
+			I18nDir:                getEnv("I18N_DIR", "resource/i18n"),
 		},
 	}
 

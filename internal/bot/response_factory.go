@@ -1,8 +1,27 @@
 package bot
 
-import tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+import (
+	"Yulia-Lingo/internal/i18n"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
 
 const parseMode = "Markdown"
+
+func BuildMainKeyboard(msgSource *i18n.MessageSource, lang i18n.Lang) tgbotapi.ReplyKeyboardMarkup {
+	kb := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton(msgSource.Get(lang, i18n.MsgLabelIrregularVerbs)),
+			tgbotapi.NewKeyboardButton(msgSource.Get(lang, i18n.MsgLabelMyWordList)),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton(msgSource.Get(lang, i18n.MsgLabelLang)),
+			tgbotapi.NewKeyboardButton(msgSource.Get(lang, i18n.MsgLabelMenu)),
+		),
+	)
+	kb.ResizeKeyboard = true
+	return kb
+}
 
 func NewMessage(chatID int64, text string) tgbotapi.MessageConfig {
 	msg := tgbotapi.NewMessage(chatID, text)

@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"Yulia-Lingo/internal/config"
+	"Yulia-Lingo/internal/i18n"
 	"Yulia-Lingo/internal/logger"
 )
 
@@ -19,6 +20,7 @@ const (
 	maxResponseSize = 1024 * 1024
 	defaultAPIURL   = "https://api.mymemory.translated.net/get"
 	maxRetries      = 3
+	maxWordLength   = 50
 )
 
 var allowedHosts = map[string]bool{
@@ -131,24 +133,30 @@ func (c *client) doTranslate(ctx context.Context, word, targetLang string) (Tran
 		return Translation{}, fmt.Errorf("failed to parse response: %w", err)
 	}
 
+	seen := map[string]bool{}
 	var terms []string
-	if t := apiResp.ResponseData.TranslatedText; t != "" {
-		terms = append(terms, t)
-	}
-	for _, m := range apiResp.Matches {
-		if m.Translation != "" && len(terms) < 3 {
-			terms = append(terms, m.Translation)
+	addTerm := func(t string) {
+		if t != "" && !seen[t] {
+			seen[t] = true
+			terms = append(terms, t)
 		}
+	}
+	addTerm(apiResp.ResponseData.TranslatedText)
+	for _, m := range apiResp.Matches {
+		if len(terms) >= 3 {
+			break
+		}
+		addTerm(m.Translation)
 	}
 	if len(terms) == 0 {
 		return Translation{}, fmt.Errorf("no translation found for %q", word)
 	}
 
-	return Translation{Dictionary: []DictionaryEntry{{PartOfSpeech: "word", Terms: terms}}}, nil
+	return Translation{Terms: terms}, nil
 }
 
 func isValidWord(word string) bool {
-	if len(word) == 0 || len(word) > 50 {
+	if len(word) == 0 || len(word) > maxWordLength {
 		return false
 	}
 	for _, r := range word {
@@ -172,8 +180,8 @@ func (c *client) buildURL(word, targetLang string) (string, error) {
 		return "", fmt.Errorf("host not allowed: %s", u.Host)
 	}
 	if targetLang == "" {
-		targetLang = "ru"
+		targetLang = string(i18n.LangRU)
 	}
-	u.RawQuery = url.Values{"q": {word}, "langpair": {"en|" + targetLang}}.Encode()
+	u.RawQuery = url.Values{"q": {word}, "langpair": {string(i18n.LangEN) + "|" + targetLang}}.Encode()
 	return u.String(), nil
 }

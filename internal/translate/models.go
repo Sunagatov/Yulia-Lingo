@@ -1,10 +1,12 @@
 package translate
 
 type Translation struct {
-	Dictionary []DictionaryEntry
+	Terms []string
 }
 
-type DictionaryEntry struct {
-	PartOfSpeech string
-	Terms        []string
+func (t Translation) FirstTranslation() string {
+	if len(t.Terms) > 0 {
+		return t.Terms[0]
+	}
+	return ""
 }

@@ -83,15 +83,16 @@ func (h *Handler) showPage(ctx context.Context, b *tgbotapi.BotAPI, query *tgbot
 
 func (h *Handler) buildText(letter string, verbs []Entity, page, total int, lang i18n.Lang) string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("*%s*\n\n", h.msgSource.Get(lang, i18n.MsgIrregularVerbsTitle, strings.ToUpper(letter))))
+	b.WriteString(h.msgSource.Get(lang, i18n.MsgIrregularVerbsTitle, letter) + "\n\n")
 	for i, v := range verbs {
-		b.WriteString(fmt.Sprintf("%d. *%s* — %s — %s\n", page*verbsPerPage+i+1, v.Verb, v.Past, v.PastParticiple))
+		line := h.msgSource.Get(lang, i18n.MsgVerbRow, page*verbsPerPage+i+1, v.Verb, v.Past, v.PastParticiple)
 		if v.Original != "" {
-			b.WriteString(fmt.Sprintf("   _(%s)_\n", v.Original))
+			line += h.msgSource.Get(lang, i18n.MsgVerbRowTranslation, v.Original)
 		}
+		b.WriteString(line + "\n")
 	}
 	totalPages := (total + verbsPerPage - 1) / verbsPerPage
-	b.WriteString(fmt.Sprintf("\n%s | %s",
+	b.WriteString(h.msgSource.Get(lang, i18n.MsgPageFooter,
 		h.msgSource.Get(lang, i18n.MsgPageInfo, page+1, totalPages),
 		h.msgSource.Get(lang, i18n.MsgTotalVerbs, total),
 	))
@@ -104,7 +105,7 @@ func (h *Handler) buildLetterKeyboard(activeLetter string) tgbotapi.InlineKeyboa
 	for _, l := range letters {
 		label := string(l)
 		if label == activeLetter {
-			label = "✅" + label
+			label = bot.ActiveMark + label
 		}
 		row = append(row, tgbotapi.NewInlineKeyboardButtonData(label, CallbackVerbLetter+string(l)))
 		if len(row) == buttonsPerRow {

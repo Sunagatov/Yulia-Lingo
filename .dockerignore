@@ -1,0 +1,37 @@
+# Version control
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+
+# Amazon Q
+.amazonq/
+
+# CI/CD
+.github/
+
+# Docker override files
+docker-compose*.yml
+docker-compose*.yaml
+
+# Environment files (injected at runtime)
+.env*
+
+# Docs and markdown
+*.md
+
+# Test files
+*_test.go
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Build output
+yulia-lingo

@@ -11,11 +11,22 @@ type BotState string
 
 const StateIdle BotState = "IDLE"
 
+const (
+	CmdStart   = "start"
+	CmdMenu    = "menu"
+	CmdCancel  = "cancel"
+	CmdLang    = "lang"
+	CmdDefault = "default"
+
+	ActiveMark = "✅ "
+)
+
 type UserSession struct {
 	mu           sync.RWMutex
 	state        BotState
 	language     string
 	activeLetter string
+	pendingTrans map[string]string
 }
 
 func (s *UserSession) SetState(state BotState) {
@@ -47,6 +58,21 @@ func (s *UserSession) SetLanguage(lang string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.language = lang
+}
+
+func (s *UserSession) SetPendingWord(word, translation string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.pendingTrans == nil {
+		s.pendingTrans = make(map[string]string)
+	}
+	s.pendingTrans[word] = translation
+}
+
+func (s *UserSession) PendingTranslation(word string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pendingTrans[word]
 }
 
 func (s *UserSession) SetActiveLetter(letter string) {

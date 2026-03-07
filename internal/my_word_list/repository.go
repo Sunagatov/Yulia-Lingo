@@ -8,30 +8,57 @@ import (
 )
 
 const (
-	getCountsQuery = "SELECT part_of_speech, COUNT(*) FROM words GROUP BY part_of_speech"
-	getPageQuery   = `
-		SELECT w.id, w.word, w.part_of_speech, t.translation 
-		FROM words w 
-		JOIN translations t ON w.id = t.word_id 
-		WHERE w.part_of_speech = $1 
+	getPageQuery = `
+		SELECT id, word, part_of_speech, translation
+		FROM words
+		WHERE user_id = $1
+		ORDER BY word
 		LIMIT $2 OFFSET $3`
+	getTotalQuery  = `SELECT COUNT(*) FROM words WHERE user_id = $1`
+	saveWordQuery   = `INSERT INTO words (user_id, word, part_of_speech, translation) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, word) DO NOTHING`
+	getByWordQuery  = `SELECT id, word, part_of_speech, translation FROM words WHERE user_id = $1 AND word = $2`
+	deleteWordQuery = `DELETE FROM words WHERE user_id = $1 AND word = $2`
 	createWordsTableQuery = `
 		CREATE TABLE IF NOT EXISTS words (
-			id SERIAL PRIMARY KEY,
-			word VARCHAR(255) NOT NULL,
-			part_of_speech VARCHAR(50) NOT NULL
+			id            SERIAL PRIMARY KEY,
+			user_id       BIGINT NOT NULL,
+			word          VARCHAR(255) NOT NULL,
+			part_of_speech VARCHAR(50) NOT NULL DEFAULT 'word',
+			translation   VARCHAR(255) NOT NULL DEFAULT '',
+			CONSTRAINT words_user_word_unique UNIQUE (user_id, word)
 		)`
-	createTranslationsTableQuery = `
-		CREATE TABLE IF NOT EXISTS translations (
-			id SERIAL PRIMARY KEY,
-			word_id INTEGER REFERENCES words(id),
-			translation VARCHAR(255) NOT NULL
-		)`
+	migrateWordsTableQuery = `
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='words' AND column_name='user_id'
+			) THEN
+				TRUNCATE TABLE words CASCADE;
+				ALTER TABLE words
+					ADD COLUMN user_id BIGINT NOT NULL DEFAULT 0,
+					ADD COLUMN translation VARCHAR(255) NOT NULL DEFAULT '',
+					DROP COLUMN IF EXISTS part_of_speech;
+				ALTER TABLE words
+					ADD COLUMN part_of_speech VARCHAR(50) NOT NULL DEFAULT 'word';
+				ALTER TABLE words ALTER COLUMN user_id DROP DEFAULT;
+			END IF;
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.table_constraints
+				WHERE table_name='words' AND constraint_name='words_user_word_unique'
+			) THEN
+				ALTER TABLE words ADD CONSTRAINT words_user_word_unique UNIQUE (user_id, word);
+			END IF;
+		END$$`
+	createWordsIndexQuery = `CREATE INDEX IF NOT EXISTS idx_words_user_id ON words(user_id)`
 )
 
 type Repository interface {
-	GetCountsByPOS(ctx context.Context) (map[string]int, error)
-	GetPage(ctx context.Context, offset, limit int, partOfSpeech string) ([]Entity, error)
+	GetPage(ctx context.Context, userID int64, offset, limit int) ([]Entity, error)
+	GetByWord(ctx context.Context, userID int64, word string) (Entity, error)
+	GetTotal(ctx context.Context, userID int64) (int, error)
+	Save(ctx context.Context, userID int64, word, partOfSpeech, translation string) error
+	Delete(ctx context.Context, userID int64, word string) error
 	Initialize(ctx context.Context) error
 }
 
@@ -43,26 +70,8 @@ func NewRepository(db *pgxpool.Pool) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) GetCountsByPOS(ctx context.Context) (map[string]int, error) {
-	rows, err := r.db.Query(ctx, getCountsQuery)
-	if err != nil {
-		return nil, fmt.Errorf("query counts: %w", err)
-	}
-	defer rows.Close()
-	counts := make(map[string]int)
-	for rows.Next() {
-		var pos string
-		var count int
-		if err := rows.Scan(&pos, &count); err != nil {
-			return nil, fmt.Errorf("scan: %w", err)
-		}
-		counts[pos] = count
-	}
-	return counts, rows.Err()
-}
-
-func (r *repository) GetPage(ctx context.Context, offset, limit int, partOfSpeech string) ([]Entity, error) {
-	rows, err := r.db.Query(ctx, getPageQuery, partOfSpeech, limit, offset)
+func (r *repository) GetPage(ctx context.Context, userID int64, offset, limit int) ([]Entity, error) {
+	rows, err := r.db.Query(ctx, getPageQuery, userID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("query page: %w", err)
 	}
@@ -78,8 +87,34 @@ func (r *repository) GetPage(ctx context.Context, offset, limit int, partOfSpeec
 	return entities, rows.Err()
 }
 
+func (r *repository) GetTotal(ctx context.Context, userID int64) (int, error) {
+	var total int
+	err := r.db.QueryRow(ctx, getTotalQuery, userID).Scan(&total)
+	return total, err
+}
+
+func (r *repository) Save(ctx context.Context, userID int64, word, partOfSpeech, translation string) error {
+	if _, err := r.db.Exec(ctx, saveWordQuery, userID, word, partOfSpeech, translation); err != nil {
+		return fmt.Errorf("save word: %w", err)
+	}
+	return nil
+}
+
+func (r *repository) GetByWord(ctx context.Context, userID int64, word string) (Entity, error) {
+	var e Entity
+	err := r.db.QueryRow(ctx, getByWordQuery, userID, word).Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Translation)
+	return e, err
+}
+
+func (r *repository) Delete(ctx context.Context, userID int64, word string) error {
+	if _, err := r.db.Exec(ctx, deleteWordQuery, userID, word); err != nil {
+		return fmt.Errorf("delete word: %w", err)
+	}
+	return nil
+}
+
 func (r *repository) Initialize(ctx context.Context) error {
-	for _, q := range []string{createWordsTableQuery, createTranslationsTableQuery} {
+	for _, q := range []string{createWordsTableQuery, migrateWordsTableQuery, createWordsIndexQuery} {
 		if _, err := r.db.Exec(ctx, q); err != nil {
 			return fmt.Errorf("exec schema: %w", err)
 		}

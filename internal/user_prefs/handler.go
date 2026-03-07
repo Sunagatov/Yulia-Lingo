@@ -23,7 +23,7 @@ func NewHandler(repo Repository, msgSource *i18n.MessageSource, log logger.Logge
 	return &Handler{repo: repo, msgSource: msgSource, log: log}
 }
 
-func (h *Handler) Command() string { return "/lang" }
+func (h *Handler) Command() string { return "/" + bot.CmdLang }
 
 func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *bot.UserSession) error {
 	lang := session.Lang()
@@ -42,10 +42,35 @@ func (h *Handler) HandleLang(ctx context.Context, b *tgbotapi.BotAPI, query *tgb
 	if err := h.repo.SetLanguage(ctx, query.From.ID, string(newLang)); err != nil {
 		h.log.Warn(ctx, "lang.persist_failed", logger.Field{Key: "user_id", Value: query.From.ID})
 	}
-	keyboard := h.buildKeyboard(newLang)
-	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(newLang, i18n.MsgLanguageSet), &keyboard)
-	_, err := b.Send(msg)
+	h.setUserCommands(ctx, b, query.Message.Chat.ID, newLang)
+	inlineKb := h.buildKeyboard(newLang)
+	// update the inline message
+	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(newLang, i18n.MsgLanguageSet), &inlineKb)
+	if _, err := b.Send(msg); err != nil {
+		return err
+	}
+	// resend reply keyboard with new language labels
+	replyKb := bot.BuildMainKeyboard(h.msgSource, newLang)
+	notice := bot.NewMessageWithKeyboard(query.Message.Chat.ID, h.msgSource.Get(newLang, i18n.MsgLanguageSet), replyKb)
+	_, err := b.Send(notice)
 	return err
+}
+
+func (h *Handler) setUserCommands(ctx context.Context, b *tgbotapi.BotAPI, chatID int64, lang i18n.Lang) {
+	cmds := []tgbotapi.BotCommand{
+		{Command: bot.CmdStart, Description: h.msgSource.Get(lang, i18n.MsgCmdStart)},
+		{Command: bot.CmdMenu, Description: h.msgSource.Get(lang, i18n.MsgCmdMenu)},
+		{Command: bot.CmdCancel, Description: h.msgSource.Get(lang, i18n.MsgCmdCancel)},
+		{Command: bot.CmdLang, Description: h.msgSource.Get(lang, i18n.MsgCmdLang)},
+	}
+	cfg := tgbotapi.NewSetMyCommandsWithScopeAndLanguage(
+		tgbotapi.NewBotCommandScopeChat(chatID),
+		"",
+		cmds...,
+	)
+	if _, err := b.Request(cfg); err != nil {
+		h.log.Warn(ctx, "lang.set_commands_failed", logger.Field{Key: "chat_id", Value: chatID})
+	}
 }
 
 func (h *Handler) buildKeyboard(active i18n.Lang) tgbotapi.InlineKeyboardMarkup {
@@ -60,7 +85,7 @@ func (h *Handler) buildKeyboard(active i18n.Lang) tgbotapi.InlineKeyboardMarkup 
 	for _, l := range langs {
 		label := h.msgSource.Get(active, l.msgKey)
 		if l.lang == active {
-			label = "✅ " + label
+			label = bot.ActiveMark + label
 		}
 		row = append(row, tgbotapi.NewInlineKeyboardButtonData(label, CallbackLang+string(l.lang)))
 	}

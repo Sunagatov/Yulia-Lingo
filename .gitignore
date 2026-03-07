@@ -17,7 +17,7 @@ go.work.sum
 vendor/
 
 # Environment & Config
-.env
+.env.prod
 .env.local
 .env.*.local
 *.key
@@ -33,9 +33,6 @@ pgdata/
 # Logs
 *.log
 logs/
-
-# Docker
-.dockerignore
 
 # IDEs
 .idea/

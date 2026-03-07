@@ -21,6 +21,7 @@ const (
 )
 
 type CallbackRouter struct {
+	prefixes []string
 	handlers map[string]CallbackDispatcher
 	log      logger.Logger
 }
@@ -35,6 +36,9 @@ func NewCallbackRouter(log logger.Logger) *CallbackRouter {
 }
 
 func (r *CallbackRouter) Register(prefix string, dispatcher CallbackDispatcher) {
+	if _, exists := r.handlers[prefix]; !exists {
+		r.prefixes = append(r.prefixes, prefix)
+	}
 	r.handlers[prefix] = dispatcher
 }
 
@@ -46,10 +50,10 @@ func (r *CallbackRouter) Route(ctx context.Context, bot *tgbotapi.BotAPI, query 
 		logger.Field{Key: "data_length", Value: len(data)},
 	)
 
-	for prefix, dispatcher := range r.handlers {
+	for _, prefix := range r.prefixes {
 		if strings.HasPrefix(data, prefix) {
 			payload := strings.TrimPrefix(data, prefix)
-			if err := dispatcher(ctx, bot, query, payload, session); err != nil {
+			if err := r.handlers[prefix](ctx, bot, query, payload, session); err != nil {
 				r.log.Error(ctx, "callback.dispatch_failed", err,
 					logger.Field{Key: "prefix", Value: prefix},
 				)

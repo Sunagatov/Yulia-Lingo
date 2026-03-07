@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	"Yulia-Lingo/internal/bot"
 	"Yulia-Lingo/internal/config"
@@ -21,6 +20,8 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+const appVersion = "1.0.0"
 
 func main() {
 	if err := run(); err != nil {
@@ -38,7 +39,7 @@ func run() error {
 	}
 
 	log := logger.New(cfg)
-	log.Info(ctx, "app.starting", logger.Field{Key: "version", Value: "1.0.0"})
+	log.Info(ctx, "app.starting", logger.Field{Key: "version", Value: appVersion})
 
 	db, err := database.Connect(ctx, cfg, log)
 	if err != nil {
@@ -46,7 +47,7 @@ func run() error {
 	}
 	defer db.Close()
 
-	msgSource, err := i18n.NewMessageSource("resource/i18n")
+	msgSource, err := i18n.NewMessageSource(cfg.App.I18nDir)
 	if err != nil {
 		return fmt.Errorf("load i18n: %w", err)
 	}
@@ -73,12 +74,12 @@ func run() error {
 
 	irrVerbsHandler := irregular_verbs.NewHandler(irrVerbsRepo, msgSource)
 	wordListHandler := my_word_list.NewHandler(wordListRepo, msgSource)
-	translateHandler := translate.NewHandler(translate.NewAPIClient(cfg, log), msgSource, log)
+	translateHandler := translate.NewHandler(translate.NewAPIClient(cfg, log), wordListRepo, msgSource, log)
 	langHandler := user_prefs.NewHandler(prefsRepo, msgSource, log)
 
 	registry := bot.NewHandlerRegistry(msgSource)
 	registry.Register(bot.NewStartHandler(msgSource))
-	registry.Register(bot.NewHelpHandler(msgSource))
+	registry.Register(bot.NewMenuHandler(msgSource))
 	registry.Register(irrVerbsHandler)
 	registry.Register(wordListHandler)
 	registry.Register(translateHandler)
@@ -86,13 +87,20 @@ func run() error {
 	for _, lang := range i18n.SupportedLangs {
 		registry.RegisterReplyKeyboard(msgSource.Get(lang, i18n.MsgLabelIrregularVerbs), i18n.MsgLabelIrregularVerbs)
 		registry.RegisterReplyKeyboard(msgSource.Get(lang, i18n.MsgLabelMyWordList), i18n.MsgLabelMyWordList)
+		registry.RegisterReplyKeyboard(msgSource.Get(lang, i18n.MsgLabelLang), "/"+bot.CmdLang)
+		registry.RegisterReplyKeyboard(msgSource.Get(lang, i18n.MsgLabelMenu), "/"+bot.CmdMenu)
 	}
 
 	callbackRouter := bot.NewCallbackRouter(log)
 	callbackRouter.Register(irregular_verbs.CallbackVerbLetter, irrVerbsHandler.HandleVerbLetter)
 	callbackRouter.Register(irregular_verbs.CallbackVerbPage, irrVerbsHandler.HandleVerbPage)
 	callbackRouter.Register(irregular_verbs.CallbackVerbBack, irrVerbsHandler.HandleVerbBack)
-	callbackRouter.Register(my_word_list.CallbackWordPos, wordListHandler.HandleWordPos)
+	callbackRouter.Register(my_word_list.CallbackWordPage, wordListHandler.HandleWordPage)
+	callbackRouter.Register(my_word_list.CallbackWordDelete, wordListHandler.HandleWordDelete)
+	callbackRouter.Register(my_word_list.CallbackWordConfDel, wordListHandler.HandleWordConfirmDelete)
+	callbackRouter.Register(my_word_list.CallbackWordQuiz, wordListHandler.HandleWordQuiz)
+	callbackRouter.Register(my_word_list.CallbackWordReveal, wordListHandler.HandleWordReveal)
+	callbackRouter.Register(my_word_list.CallbackWordBack, wordListHandler.HandleWordBack)
 	callbackRouter.Register(translate.CallbackWordSave, translateHandler.HandleWordSave)
 	callbackRouter.Register(translate.CallbackWordConfirm, translateHandler.HandleWordConfirm)
 	callbackRouter.Register(translate.CallbackWordCancel, translateHandler.HandleWordCancel)
@@ -126,7 +134,7 @@ func run() error {
 	}()
 
 	process := func(u tgbotapi.Update) {
-		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, cfg.Telegram.UpdateHandlerTimeout)
 		defer cancel()
 		if u.Message != nil {
 			userID := u.Message.From.ID
@@ -167,10 +175,10 @@ func run() error {
 func registerBotCommands(ctx context.Context, tg *tgbotapi.BotAPI, msgSource *i18n.MessageSource, log logger.Logger) {
 	for _, lang := range i18n.SupportedLangs {
 		cmds := []tgbotapi.BotCommand{
-			{Command: "start", Description: msgSource.Get(lang, i18n.MsgCmdStart)},
-			{Command: "help", Description: msgSource.Get(lang, i18n.MsgCmdHelp)},
-			{Command: "cancel", Description: msgSource.Get(lang, i18n.MsgCmdCancel)},
-			{Command: "lang", Description: msgSource.Get(lang, i18n.MsgCmdLang)},
+			{Command: bot.CmdStart, Description: msgSource.Get(lang, i18n.MsgCmdStart)},
+			{Command: bot.CmdMenu, Description: msgSource.Get(lang, i18n.MsgCmdMenu)},
+			{Command: bot.CmdCancel, Description: msgSource.Get(lang, i18n.MsgCmdCancel)},
+			{Command: bot.CmdLang, Description: msgSource.Get(lang, i18n.MsgCmdLang)},
 		}
 		cfg := tgbotapi.NewSetMyCommandsWithScopeAndLanguage(tgbotapi.NewBotCommandScopeDefault(), string(lang), cmds...)
 		if _, err := tg.Request(cfg); err != nil {
