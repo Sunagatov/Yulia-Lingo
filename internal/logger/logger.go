@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"os"
 
@@ -39,7 +40,23 @@ func New(cfg *config.Config) Logger {
 	} else {
 		handler = slog.NewJSONHandler(os.Stdout, opts)
 	}
-	return &logger{log: slog.New(handler)}
+	sl := slog.New(handler)
+	// redirect stdlib log (used by tgbotapi) into structured logger
+	log.SetOutput(&stdlibWriter{sl})
+	log.SetFlags(0)
+	return &logger{log: sl}
+}
+
+// stdlibWriter forwards stdlib log lines to slog at WARN level.
+type stdlibWriter struct{ sl *slog.Logger }
+
+func (w *stdlibWriter) Write(p []byte) (int, error) {
+	msg := string(p)
+	if len(msg) > 0 && msg[len(msg)-1] == '\n' {
+		msg = msg[:len(msg)-1]
+	}
+	w.sl.Warn(msg)
+	return len(p), nil
 }
 
 func (l *logger) Debug(ctx context.Context, msg string, fields ...Field) {

@@ -125,13 +125,16 @@ func (c *client) doTranslate(ctx context.Context, word, targetLang string) (Tran
 		ResponseData struct {
 			TranslatedText string `json:"translatedText"`
 		} `json:"responseData"`
-		Matches []struct {
-			Translation string `json:"translation"`
-		} `json:"matches"`
+		Matches json.RawMessage `json:"matches"`
 	}
 	if err := json.Unmarshal(body, &apiResp); err != nil {
 		return Translation{}, fmt.Errorf("failed to parse response: %w", err)
 	}
+	var matches []struct {
+		Translation string `json:"translation"`
+	}
+	// matches is sometimes a string instead of array (MyMemory API quirk)
+	_ = json.Unmarshal(apiResp.Matches, &matches)
 
 	seen := map[string]bool{}
 	var terms []string
@@ -142,7 +145,7 @@ func (c *client) doTranslate(ctx context.Context, word, targetLang string) (Tran
 		}
 	}
 	addTerm(apiResp.ResponseData.TranslatedText)
-	for _, m := range apiResp.Matches {
+	for _, m := range matches {
 		if len(terms) >= 3 {
 			break
 		}
