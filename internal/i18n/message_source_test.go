@@ -43,19 +43,15 @@ var allKeys = []string{
 	i18n.MsgTotalWords,
 	i18n.MsgConfirmDelete,
 	i18n.MsgConfirmDeleteWord,
-	i18n.MsgQuizMe,
-	i18n.MsgQuizQuestion,
-	i18n.MsgQuizAnswer,
-	i18n.MsgQuizNext,
-	i18n.MsgReveal,
-	i18n.MsgBackToList,
 	i18n.MsgVerbRow,
 	i18n.MsgVerbRowTranslation,
 	i18n.MsgWordRow,
 	i18n.MsgWordRowTranslation,
+	i18n.MsgWordRowConfidence,
 	i18n.MsgPageFooter,
 	i18n.MsgTranslationTerm,
 	i18n.MsgDeleteButtonLabel,
+	i18n.MsgConfidenceSet,
 }
 
 func newTestSource(t *testing.T) *i18n.MessageSource {

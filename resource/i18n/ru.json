@@ -40,6 +40,8 @@
   "page_footer": "\n_%s · %s_",
   "translation_term": "• %s",
   "delete_button_label": "🗑 %s",
+  "word_row_confidence": "%s %s — %s",
+  "confidence_set": "★ Уверенность обновлена",
   "label_irregular_verbs": "📖 Неправильные глаголы",
   "label_my_word_list": "📝 Мой список слов",
   "label_lang": "🌐 Язык",

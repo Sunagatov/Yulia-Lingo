@@ -55,12 +55,6 @@ const (
 	MsgTotalWords          = "total_words"
 	MsgConfirmDelete       = "confirm_delete"
 	MsgConfirmDeleteWord   = "confirm_delete_word"
-	MsgQuizMe              = "quiz_me"
-	MsgQuizQuestion        = "quiz_question"
-	MsgQuizAnswer          = "quiz_answer"
-	MsgQuizNext            = "quiz_next"
-	MsgReveal              = "reveal"
-	MsgBackToList          = "back_to_list"
 	MsgVerbRow             = "verb_row"
 	MsgVerbRowTranslation  = "verb_row_translation"
 	MsgWordRow             = "word_row"
@@ -68,6 +62,8 @@ const (
 	MsgPageFooter          = "page_footer"
 	MsgTranslationTerm     = "translation_term"
 	MsgDeleteButtonLabel   = "delete_button_label"
+	MsgWordRowConfidence   = "word_row_confidence"
+	MsgConfidenceSet       = "confidence_set"
 )
 
 var SupportedLangs = []Lang{LangRU, LangEN}

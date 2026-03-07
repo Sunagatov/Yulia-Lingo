@@ -9,15 +9,16 @@ import (
 
 const (
 	getPageQuery = `
-		SELECT id, word, part_of_speech, translation
+		SELECT id, word, part_of_speech, translation, confidence
 		FROM words
 		WHERE user_id = $1
-		ORDER BY word
+		ORDER BY confidence ASC, word ASC
 		LIMIT $2 OFFSET $3`
-	getTotalQuery  = `SELECT COUNT(*) FROM words WHERE user_id = $1`
-	saveWordQuery   = `INSERT INTO words (user_id, word, part_of_speech, translation) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, word) DO NOTHING`
-	getByWordQuery  = `SELECT id, word, part_of_speech, translation FROM words WHERE user_id = $1 AND word = $2`
-	deleteWordQuery = `DELETE FROM words WHERE user_id = $1 AND word = $2`
+	getTotalQuery         = `SELECT COUNT(*) FROM words WHERE user_id = $1`
+	saveWordQuery         = `INSERT INTO words (user_id, word, part_of_speech, translation, confidence) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, word) DO NOTHING`
+	getByWordQuery        = `SELECT id, word, part_of_speech, translation, confidence FROM words WHERE user_id = $1 AND word = $2`
+	deleteWordQuery       = `DELETE FROM words WHERE user_id = $1 AND word = $2`
+	setConfidenceQuery    = `UPDATE words SET confidence = $1 WHERE user_id = $2 AND word = $3`
 	createWordsTableQuery = `
 		CREATE TABLE IF NOT EXISTS words (
 			id            SERIAL PRIMARY KEY,
@@ -25,6 +26,7 @@ const (
 			word          VARCHAR(255) NOT NULL,
 			part_of_speech VARCHAR(50) NOT NULL DEFAULT 'word',
 			translation   VARCHAR(255) NOT NULL DEFAULT '',
+			confidence    SMALLINT NOT NULL DEFAULT 1,
 			CONSTRAINT words_user_word_unique UNIQUE (user_id, word)
 		)`
 	migrateWordsTableQuery = `
@@ -49,6 +51,12 @@ const (
 			) THEN
 				ALTER TABLE words ADD CONSTRAINT words_user_word_unique UNIQUE (user_id, word);
 			END IF;
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='words' AND column_name='confidence'
+			) THEN
+				ALTER TABLE words ADD COLUMN confidence SMALLINT NOT NULL DEFAULT 1;
+			END IF;
 		END$$`
 	createWordsIndexQuery = `CREATE INDEX IF NOT EXISTS idx_words_user_id ON words(user_id)`
 )
@@ -58,6 +66,7 @@ type Repository interface {
 	GetByWord(ctx context.Context, userID int64, word string) (Entity, error)
 	GetTotal(ctx context.Context, userID int64) (int, error)
 	Save(ctx context.Context, userID int64, word, partOfSpeech, translation string) error
+	SetConfidence(ctx context.Context, userID int64, word string, confidence int) error
 	Delete(ctx context.Context, userID int64, word string) error
 	Initialize(ctx context.Context) error
 }
@@ -79,7 +88,7 @@ func (r *repository) GetPage(ctx context.Context, userID int64, offset, limit in
 	var entities []Entity
 	for rows.Next() {
 		var e Entity
-		if err := rows.Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Translation); err != nil {
+		if err := rows.Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Translation, &e.Confidence); err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 		entities = append(entities, e)
@@ -94,7 +103,7 @@ func (r *repository) GetTotal(ctx context.Context, userID int64) (int, error) {
 }
 
 func (r *repository) Save(ctx context.Context, userID int64, word, partOfSpeech, translation string) error {
-	if _, err := r.db.Exec(ctx, saveWordQuery, userID, word, partOfSpeech, translation); err != nil {
+	if _, err := r.db.Exec(ctx, saveWordQuery, userID, word, partOfSpeech, translation, DefaultConfidence); err != nil {
 		return fmt.Errorf("save word: %w", err)
 	}
 	return nil
@@ -102,8 +111,15 @@ func (r *repository) Save(ctx context.Context, userID int64, word, partOfSpeech,
 
 func (r *repository) GetByWord(ctx context.Context, userID int64, word string) (Entity, error) {
 	var e Entity
-	err := r.db.QueryRow(ctx, getByWordQuery, userID, word).Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Translation)
+	err := r.db.QueryRow(ctx, getByWordQuery, userID, word).Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Translation, &e.Confidence)
 	return e, err
+}
+
+func (r *repository) SetConfidence(ctx context.Context, userID int64, word string, confidence int) error {
+	if _, err := r.db.Exec(ctx, setConfidenceQuery, confidence, userID, word); err != nil {
+		return fmt.Errorf("set confidence: %w", err)
+	}
+	return nil
 }
 
 func (r *repository) Delete(ctx context.Context, userID int64, word string) error {

@@ -3,7 +3,6 @@ package my_word_list
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"strings"
 
 	"Yulia-Lingo/internal/bot"
@@ -13,13 +12,12 @@ import (
 )
 
 const (
-	wordsPerPage        = 8
+	wordsPerPage        = 5 // fewer per page — each word now has a star row
 	CallbackWordPage    = bot.CallbackPrefixPage + "W_"
 	CallbackWordDelete  = bot.CallbackPrefixWord + "DEL_"
 	CallbackWordConfDel = bot.CallbackPrefixConfirm + "DEL_"
 	CallbackWordBack    = bot.CallbackPrefixWord + "BACK"
-	CallbackWordQuiz    = bot.CallbackPrefixWord + "QUIZ"
-	CallbackWordReveal  = bot.CallbackPrefixWord + "REVEAL_"
+	CallbackWordRate    = bot.CallbackPrefixWord + "RATE_" // RATE_{confidence}_{word}
 )
 
 type Handler struct {
@@ -43,8 +41,7 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 		return err
 	}
 	keyboard := h.buildKeyboard(session.Lang(), words, 0, total, totalPages)
-	msg := bot.NewMessageWithKeyboard(update.Message.Chat.ID, text, &keyboard)
-	_, err := b.Send(msg)
+	_, err := b.Send(bot.NewMessageWithKeyboard(update.Message.Chat.ID, text, &keyboard))
 	return err
 }
 
@@ -54,16 +51,32 @@ func (h *Handler) HandleWordPage(ctx context.Context, b *tgbotapi.BotAPI, query 
 	return h.showPage(ctx, b, query, page, session)
 }
 
+func (h *Handler) HandleWordRate(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, data string, session *bot.UserSession) error {
+	// data format: {confidence}_{word}
+	var confidence int
+	idx := strings.Index(data, "_")
+	if idx < 0 {
+		return nil
+	}
+	fmt.Sscanf(data[:idx], "%d", &confidence)
+	word := data[idx+1:]
+	if confidence < MinConfidence || confidence > MaxConfidence {
+		return nil
+	}
+	_ = h.repo.SetConfidence(ctx, query.From.ID, word, confidence)
+	return h.showPage(ctx, b, query, 0, session)
+}
+
 func (h *Handler) HandleWordDelete(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, word string, session *bot.UserSession) error {
 	lang := session.Lang()
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+	kb := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgConfirmDelete), CallbackWordConfDel+word),
 			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgCancel), CallbackWordBack),
 		),
 	)
 	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID,
-		h.msgSource.Get(lang, i18n.MsgConfirmDeleteWord, word), &keyboard)
+		h.msgSource.Get(lang, i18n.MsgConfirmDeleteWord, word), &kb)
 	_, err := b.Send(msg)
 	return err
 }
@@ -75,48 +88,6 @@ func (h *Handler) HandleWordConfirmDelete(ctx context.Context, b *tgbotapi.BotAP
 
 func (h *Handler) HandleWordBack(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
 	return h.showPage(ctx, b, query, 0, session)
-}
-
-func (h *Handler) HandleWordQuiz(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
-	total, _ := h.repo.GetTotal(ctx, query.From.ID)
-	if total == 0 {
-		return h.showPage(ctx, b, query, 0, session)
-	}
-	offset := rand.Intn(total)
-	words, _ := h.repo.GetPage(ctx, query.From.ID, offset, 1)
-	if len(words) == 0 {
-		return h.showPage(ctx, b, query, 0, session)
-	}
-	w := words[0]
-	lang := session.Lang()
-	kb := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgReveal), CallbackWordReveal+w.Word),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgQuizNext), CallbackWordQuiz),
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgBackToList), CallbackWordBack),
-		),
-	)
-	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID,
-		h.msgSource.Get(lang, i18n.MsgQuizQuestion, w.Word), &kb)
-	_, err := b.Send(msg)
-	return err
-}
-
-func (h *Handler) HandleWordReveal(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, word string, session *bot.UserSession) error {
-	lang := session.Lang()
-	e, _ := h.repo.GetByWord(ctx, query.From.ID, word)
-	kb := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgQuizNext), CallbackWordQuiz),
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgBackToList), CallbackWordBack),
-		),
-	)
-	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID,
-		h.msgSource.Get(lang, i18n.MsgQuizAnswer, word, e.Translation), &kb)
-	_, err := b.Send(msg)
-	return err
 }
 
 func (h *Handler) showPage(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, page int, session *bot.UserSession) error {
@@ -147,7 +118,11 @@ func (h *Handler) buildText(lang i18n.Lang, words []Entity, page, total, totalPa
 		return b.String()
 	}
 	for i, w := range words {
-		b.WriteString(h.msgSource.Get(lang, i18n.MsgWordRow, page*wordsPerPage+i+1, w.Word))
+		b.WriteString(h.msgSource.Get(lang, i18n.MsgWordRowConfidence,
+			fmt.Sprintf("%d.", page*wordsPerPage+i+1),
+			w.Stars(),
+			w.Word,
+		))
 		if w.Translation != "" {
 			b.WriteString(h.msgSource.Get(lang, i18n.MsgWordRowTranslation, w.Translation))
 		}
@@ -163,20 +138,20 @@ func (h *Handler) buildText(lang i18n.Lang, words []Entity, page, total, totalPa
 func (h *Handler) buildKeyboard(lang i18n.Lang, words []Entity, page, total, totalPages int) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
 
-	// 2 delete buttons per row — compact, word as label
-	for i := 0; i < len(words); i += 2 {
-		row := []tgbotapi.InlineKeyboardButton{
-			tgbotapi.NewInlineKeyboardButtonData(
-				h.msgSource.Get(lang, i18n.MsgDeleteButtonLabel, words[i].Word),
-				CallbackWordDelete+words[i].Word,
-			),
-		}
-		if i+1 < len(words) {
+	for _, w := range words {
+		// star rating row: ★1 ★2 ★3 ★4 ★5  🗑
+		var row []tgbotapi.InlineKeyboardButton
+		for c := MinConfidence; c <= MaxConfidence; c++ {
+			star := "☆"
+			if c <= w.Confidence {
+				star = "★"
+			}
 			row = append(row, tgbotapi.NewInlineKeyboardButtonData(
-				h.msgSource.Get(lang, i18n.MsgDeleteButtonLabel, words[i+1].Word),
-				CallbackWordDelete+words[i+1].Word,
+				fmt.Sprintf("%s%d", star, c),
+				fmt.Sprintf("%s%d_%s", CallbackWordRate, c, w.Word),
 			))
 		}
+		row = append(row, tgbotapi.NewInlineKeyboardButtonData("🗑", CallbackWordDelete+w.Word))
 		rows = append(rows, row)
 	}
 
@@ -188,7 +163,7 @@ func (h *Handler) buildKeyboard(lang i18n.Lang, words []Entity, page, total, tot
 			fmt.Sprintf("%s%d", CallbackWordPage, page-1),
 		))
 	}
-	if page < totalPages-1 {
+	if page < (total-1)/wordsPerPage {
 		nav = append(nav, tgbotapi.NewInlineKeyboardButtonData(
 			h.msgSource.Get(lang, i18n.MsgNext),
 			fmt.Sprintf("%s%d", CallbackWordPage, page+1),
@@ -196,13 +171,6 @@ func (h *Handler) buildKeyboard(lang i18n.Lang, words []Entity, page, total, tot
 	}
 	if len(nav) > 0 {
 		rows = append(rows, nav)
-	}
-
-	// quiz button — only when there are enough words to be interesting
-	if total >= 2 {
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgQuizMe), CallbackWordQuiz),
-		))
 	}
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)

@@ -40,6 +40,8 @@
   "page_footer": "\n_%s · %s_",
   "translation_term": "• %s",
   "delete_button_label": "🗑 %s",
+  "word_row_confidence": "%s %s — %s",
+  "confidence_set": "★ Confidence updated",
   "label_irregular_verbs": "📖 Irregular Verbs",
   "label_my_word_list": "📝 My Word List",
   "label_lang": "🌐 Language",
