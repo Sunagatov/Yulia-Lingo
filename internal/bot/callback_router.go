@@ -54,23 +54,22 @@ func (r *CallbackRouter) Route(ctx context.Context, bot *tgbotapi.BotAPI, query 
 					logger.Field{Key: "prefix", Value: prefix},
 				)
 			}
-			return r.answerCallback(ctx, bot, query.ID, "")
+			return r.answerCallback(ctx, bot, query.ID)
 		}
 	}
 
 	r.log.Warn(ctx, "callback.unknown_prefix",
 		logger.Field{Key: "data", Value: data},
 	)
-	return r.answerCallback(ctx, bot, query.ID, "")
+	return r.answerCallback(ctx, bot, query.ID)
 }
 
-func (r *CallbackRouter) answerCallback(ctx context.Context, bot *tgbotapi.BotAPI, callbackQueryID, text string) error {
-	callback := tgbotapi.NewCallback(callbackQueryID, text)
-	if _, err := bot.Request(callback); err != nil {
+func (r *CallbackRouter) answerCallback(ctx context.Context, bot *tgbotapi.BotAPI, callbackQueryID string) error {
+	if _, err := bot.Request(tgbotapi.NewCallback(callbackQueryID, "")); err != nil {
 		r.log.Error(ctx, "callback.answer_failed", err,
 			logger.Field{Key: "callback_id", Value: callbackQueryID},
 		)
-		return fmt.Errorf("failed to answer callback: %w", err)
+		return fmt.Errorf("answer callback: %w", err)
 	}
 	return nil
 }

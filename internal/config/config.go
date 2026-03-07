@@ -91,7 +91,7 @@ func Load() (*Config, error) {
 	}
 
 	if err := config.validate(); err != nil {
-		return nil, fmt.Errorf("configuration validation failed: %w", err)
+		return nil, err
 	}
 
 	return config, nil
@@ -113,13 +113,6 @@ func (c *Config) validate() error {
 	return nil
 }
 
-func (c *Config) GetDatabaseURL() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		c.Database.User, c.Database.Password,
-		c.Database.Host, c.Database.Port,
-		c.Database.Name, c.Database.SSLMode,
-	)
-}
 
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {

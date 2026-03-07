@@ -11,7 +11,6 @@ import (
 	"time"
 	"unicode"
 
-	"Yulia-Lingo/internal/config"
 	"Yulia-Lingo/internal/logger"
 )
 
@@ -31,15 +30,19 @@ type APIClient interface {
 }
 
 type client struct {
-	cfg        *config.Config
+	apiURL  string
+	apiKey  string
+	apiHost string
 	httpClient *http.Client
 	log        logger.Logger
 }
 
 func NewAPIClient(cfg *config.Config, log logger.Logger) APIClient {
 	return &client{
-		cfg: cfg,
-		log: log,
+		apiURL:  cfg.Translate.APIURL,
+		apiKey:  cfg.Translate.APIKey,
+		apiHost: cfg.Translate.APIHost,
+		log:     log,
 		httpClient: &http.Client{
 			Timeout: cfg.Translate.Timeout,
 			Transport: &http.Transport{
@@ -93,11 +96,11 @@ func (c *client) doTranslate(ctx context.Context, word, targetLang string) (Tran
 	}
 	req.Header.Set("User-Agent", "Yulia-Lingo/1.0")
 	req.Header.Set("Accept", "application/json")
-	if c.cfg.Translate.APIKey != "" {
-		req.Header.Set("X-RapidAPI-Key", c.cfg.Translate.APIKey)
+	if c.apiKey != "" {
+		req.Header.Set("X-RapidAPI-Key", c.apiKey)
 	}
-	if c.cfg.Translate.APIHost != "" {
-		req.Header.Set("X-RapidAPI-Host", c.cfg.Translate.APIHost)
+	if c.apiHost != "" {
+		req.Header.Set("X-RapidAPI-Host", c.apiHost)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -156,7 +159,7 @@ func isValidWord(word string) bool {
 }
 
 func (c *client) buildURL(word, targetLang string) (string, error) {
-	base := c.cfg.Translate.APIURL
+	base := c.apiURL
 	if base == "" {
 		base = defaultAPIURL
 	}

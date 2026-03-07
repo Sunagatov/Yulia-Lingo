@@ -125,6 +125,22 @@ func run() error {
 		}
 	}()
 
+	process := func(u tgbotapi.Update) {
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		if u.Message != nil {
+			userID := u.Message.From.ID
+			if err := registry.Route(ctx, tg, u, sessions.GetOrCreate(ctx, userID)); err != nil {
+				log.Error(ctx, "message.handle_failed", err, logger.Field{Key: "user_id", Value: userID})
+			}
+		} else if u.CallbackQuery != nil {
+			userID := u.CallbackQuery.From.ID
+			if err := callbackRouter.Route(ctx, tg, u.CallbackQuery, sessions.GetOrCreate(ctx, userID)); err != nil {
+				log.Error(ctx, "callback.handle_failed", err, logger.Field{Key: "user_id", Value: userID})
+			}
+		}
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -142,27 +158,8 @@ func run() error {
 					<-semaphore
 					wg.Done()
 				}()
-				processUpdate(ctx, u, tg, registry, callbackRouter, sessions, log)
+				process(u)
 			}(update)
-		}
-	}
-}
-
-func processUpdate(ctx context.Context, update tgbotapi.Update, tg *tgbotapi.BotAPI, registry *bot.HandlerRegistry, callbackRouter *bot.CallbackRouter, sessions *bot.SessionManager, log logger.Logger) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	if update.Message != nil {
-		userID := update.Message.From.ID
-		session := sessions.GetOrCreate(ctx, userID)
-		if err := registry.Route(ctx, tg, update, session); err != nil {
-			log.Error(ctx, "message.handle_failed", err, logger.Field{Key: "user_id", Value: userID})
-		}
-	} else if update.CallbackQuery != nil {
-		userID := update.CallbackQuery.From.ID
-		session := sessions.GetOrCreate(ctx, userID)
-		if err := callbackRouter.Route(ctx, tg, update.CallbackQuery, session); err != nil {
-			log.Error(ctx, "callback.handle_failed", err, logger.Field{Key: "user_id", Value: userID})
 		}
 	}
 }

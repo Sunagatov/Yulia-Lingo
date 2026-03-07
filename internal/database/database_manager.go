@@ -12,7 +12,12 @@ import (
 )
 
 func Connect(ctx context.Context, cfg *config.Config, log logger.Logger) (*pgxpool.Pool, error) {
-	poolConfig, err := pgxpool.ParseConfig(cfg.GetDatabaseURL())
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		cfg.Database.User, cfg.Database.Password,
+		cfg.Database.Host, cfg.Database.Port,
+		cfg.Database.Name, cfg.Database.SSLMode,
+	)
+	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("parse db config: %w", err)
 	}
