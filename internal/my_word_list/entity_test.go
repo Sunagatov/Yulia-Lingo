@@ -22,7 +22,7 @@ func TestEntityStars(t *testing.T) {
 	}
 }
 
-func TestToRepoFilter(t *testing.T) {
+func TestBuildFilteredQuery(t *testing.T) {
 	cases := []struct {
 		name string
 		in   Filter

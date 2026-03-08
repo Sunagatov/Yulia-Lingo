@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-	"unicode"
 
 	"Yulia-Lingo/internal/config"
 	"Yulia-Lingo/internal/i18n"
@@ -47,9 +46,6 @@ func NewAPIClient(cfg *config.Config, log logger.Logger) APIClient {
 }
 
 func (c *client) Translate(ctx context.Context, word, sourceLang, targetLang string) (Translation, error) {
-	if !isValidWord(word) {
-		return Translation{}, fmt.Errorf("invalid word: %s", word)
-	}
 	if sourceLang == "" {
 		sourceLang = string(i18n.LangEN)
 	}
@@ -69,12 +65,10 @@ func (c *client) Translate(ctx context.Context, word, sourceLang, targetLang str
 			logger.Field{Key: "error", Value: err.Error()},
 		)
 		if attempt < maxRetries-1 {
-			timer := time.NewTimer(time.Duration(attempt+1) * time.Second)
 			select {
 			case <-ctx.Done():
-				timer.Stop()
 				return Translation{}, ctx.Err()
-			case <-timer.C:
+			case <-time.After(time.Duration(attempt+1) * time.Second):
 			}
 		}
 	}
@@ -149,16 +143,4 @@ func (c *client) doTranslate(ctx context.Context, word, sourceLang, targetLang s
 		return Translation{}, fmt.Errorf("no translation found for %q", word)
 	}
 	return Translation{Terms: terms}, nil
-}
-
-func isValidWord(word string) bool {
-	if len(word) == 0 || len(word) > maxWordLength {
-		return false
-	}
-	for _, r := range word {
-		if !unicode.IsLetter(r) && r != '-' && r != '\'' {
-			return false
-		}
-	}
-	return true
 }

@@ -34,10 +34,10 @@ type DatabaseConfig struct {
 }
 
 type TelegramConfig struct {
-	BotToken              string
-	MaxConcurrentUsers    int
-	Timeout               time.Duration
-	UpdateHandlerTimeout  time.Duration
+	BotToken             string
+	MaxConcurrentUsers   int
+	Timeout              time.Duration
+	UpdateHandlerTimeout time.Duration
 }
 
 type TranslateConfig struct {
@@ -120,7 +120,6 @@ func (c *Config) validate() error {
 	}
 	return nil
 }
-
 
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {

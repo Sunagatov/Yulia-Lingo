@@ -5,15 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"Yulia-Lingo/internal/bot"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Filter struct {
-	Search       string
-	Confidence   int
-	PartOfSpeech string
-	Sort         string
-}
+type Filter = bot.WordListFilter
 
 const (
 	saveWordQuery         = `INSERT INTO words (user_id, word, part_of_speech, translation, confidence) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, word) DO NOTHING`
@@ -82,7 +78,7 @@ func NewRepository(db *pgxpool.Pool) Repository {
 }
 
 func (r *repository) Save(ctx context.Context, userID int64, word, partOfSpeech, translation string) error {
-	if _, err := r.db.Exec(ctx, saveWordQuery, userID, word, partOfSpeech, translation, DefaultConfidence); err != nil {
+	if _, err := r.db.Exec(ctx, saveWordQuery, userID, word, partOfSpeech, translation, MinConfidence); err != nil {
 		return fmt.Errorf("save word: %w", err)
 	}
 	return nil

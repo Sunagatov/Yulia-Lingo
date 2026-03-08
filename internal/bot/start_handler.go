@@ -25,7 +25,10 @@ func (h *StartHandler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tg
 		return fmt.Errorf("missing user info")
 	}
 	lang := session.Lang()
-	name := strings.TrimSpace(update.Message.From.FirstName + " " + update.Message.From.LastName)
+	name := update.Message.From.FirstName
+	if last := strings.TrimSpace(update.Message.From.LastName); last != "" {
+		name += " " + last
+	}
 
 	keyboard := BuildMainKeyboard(h.msgSource, lang)
 

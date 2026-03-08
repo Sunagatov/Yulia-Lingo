@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"unicode"
 
 	"Yulia-Lingo/internal/bot"
 	"Yulia-Lingo/internal/i18n"
@@ -93,8 +92,7 @@ func (h *Handler) HandleWordSave(ctx context.Context, b *tgbotapi.BotAPI, query 
 
 func (h *Handler) HandleWordConfirm(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, word string, session *bot.UserSession) error {
 	lang := session.Lang()
-	translation := session.PendingTranslation(word)
-	partOfSpeech := session.PendingPartOfSpeech(word)
+	translation, partOfSpeech := session.PendingWord(word)
 	if err := h.wordRepo.Save(ctx, query.From.ID, word, partOfSpeech, translation); err != nil {
 		h.log.Warn(ctx, "word.save_failed", logger.Field{Key: "user_id", Value: query.From.ID})
 	}
@@ -111,44 +109,6 @@ func (h *Handler) HandleWordCancel(ctx context.Context, b *tgbotapi.BotAPI, quer
 	return err
 }
 
-// validateWord returns an i18n message key describing the problem, or "" if valid.
-func validateWord(word string) string {
-	if len(word) == 0 {
-		return i18n.MsgInvalidWord
-	}
-	if len(word) > maxWordLength {
-		return i18n.MsgWordTooLong
-	}
-	if strings.ContainsRune(word, ' ') {
-		return i18n.MsgPhraseNotAllowed
-	}
-	var hasCyrillic, hasLatin bool
-	for _, r := range word {
-		if !unicode.IsLetter(r) && r != '-' && r != '\'' {
-			return i18n.MsgInvalidWord
-		}
-		if unicode.Is(unicode.Cyrillic, r) {
-			hasCyrillic = true
-		} else if unicode.Is(unicode.Latin, r) {
-			hasLatin = true
-		}
-	}
-	if hasCyrillic && hasLatin {
-		return i18n.MsgMixedScript
-	}
-	return ""
-}
-
-// translationDirection detects script of the word: Cyrillic → RU→EN, Latin → EN→RU.
-func translationDirection(word string) (source, target string) {
-	for _, r := range word {
-		if unicode.Is(unicode.Cyrillic, r) {
-			return string(i18n.LangRU), string(i18n.LangEN)
-		}
-	}
-	return string(i18n.LangEN), string(i18n.LangRU)
-}
-
 func (h *Handler) buildText(word string, t Translation, lang i18n.Lang) string {
 	var b strings.Builder
 	header := h.msgSource.Get(lang, i18n.MsgTranslationHeader, word)
@@ -156,13 +116,17 @@ func (h *Handler) buildText(word string, t Translation, lang i18n.Lang) string {
 		header += fmt.Sprintf(" _(%s)_", t.PartOfSpeech)
 	}
 	b.WriteString(header + "\n\n")
-	for i, term := range t.Terms {
-		if i >= maxTranslations {
-			break
-		}
-		b.WriteString(h.msgSource.Get(lang, i18n.MsgTranslationTerm, term) + "\n")
+	terms := t.Terms
+	if len(terms) > maxTranslations {
+		terms = terms[:maxTranslations]
 	}
-	text := strings.TrimRight(b.String(), "\n")
+	for i, term := range terms {
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		b.WriteString(h.msgSource.Get(lang, i18n.MsgTranslationTerm, term))
+	}
+	text := b.String()
 	if len(text) > maxMsgLength {
 		text = text[:maxMsgLength-len(truncationSuffix)] + truncationSuffix
 	}

@@ -19,26 +19,26 @@ func (l Lang) IsValid() bool {
 }
 
 const (
-	MsgWelcome            = "welcome"
-	MsgMenu               = "menu"
-	MsgCancelled          = "cancelled"
-	MsgNothingToCancel    = "nothing_to_cancel"
-	MsgChooseLetter       = "choose_letter"
-	MsgWordSaved          = "word_saved"
-	MsgConfirmSave        = "confirm_save"
-	MsgSaveWord           = "save_word"
-	MsgPageInfo           = "page_info"
-	MsgTotalVerbs         = "total_verbs"
-	MsgBackToLetters      = "back_to_letters"
-	MsgBackToList         = "back_to_list"
-	MsgPrevious           = "previous"
-	MsgNext               = "next"
-	MsgChooseLanguage     = "choose_language"
-	MsgLanguageSet        = "language_set"
-	MsgInvalidWord        = "invalid_word"
-	MsgTranslateError     = "translate_error"
-	MsgConfirm            = "confirm"
-	MsgCancel             = "cancel"
+	MsgWelcome             = "welcome"
+	MsgMenu                = "menu"
+	MsgCancelled           = "cancelled"
+	MsgNothingToCancel     = "nothing_to_cancel"
+	MsgChooseLetter        = "choose_letter"
+	MsgWordSaved           = "word_saved"
+	MsgConfirmSave         = "confirm_save"
+	MsgSaveWord            = "save_word"
+	MsgPageInfo            = "page_info"
+	MsgTotalVerbs          = "total_verbs"
+	MsgBackToLetters       = "back_to_letters"
+	MsgBackToList          = "back_to_list"
+	MsgPrevious            = "previous"
+	MsgNext                = "next"
+	MsgChooseLanguage      = "choose_language"
+	MsgLanguageSet         = "language_set"
+	MsgInvalidWord         = "invalid_word"
+	MsgTranslateError      = "translate_error"
+	MsgConfirm             = "confirm"
+	MsgCancel              = "cancel"
 	MsgIrregularVerbsTitle = "irregular_verbs_title"
 	MsgTranslationHeader   = "translation_header"
 	MsgLangRU              = "lang_ru"
@@ -64,26 +64,26 @@ const (
 	MsgTranslationTerm     = "translation_term"
 	MsgDeleteButtonLabel   = "delete_button_label"
 	MsgWordRowConfidence   = "word_row_confidence"
-	MsgAlreadySaved       = "already_saved"
+	MsgAlreadySaved        = "already_saved"
 	MsgWordTooLong         = "word_too_long"
-	MsgMixedScript        = "mixed_script"
-	MsgPhraseNotAllowed   = "phrase_not_allowed"
-	MsgFilterSearch       = "filter_search"
-	MsgFilterConfidence   = "filter_confidence"
-	MsgFilterPartOfSpeech = "filter_part_of_speech"
-	MsgFilterSort         = "filter_sort"
-	MsgFilterClear        = "filter_clear"
-	MsgSortAlpha          = "sort_alpha"
-	MsgSortAlphaDesc      = "sort_alpha_desc"
-	MsgSortConfidence     = "sort_confidence"
-	MsgSortConfidenceDesc = "sort_confidence_desc"
-	MsgSortNewest         = "sort_newest"
-	MsgSearchPrompt       = "search_prompt"
-	MsgNoResults          = "no_results"
-	MsgWordDetail         = "word_detail"
-	MsgFiltersScreen      = "filters_screen"
-	MsgFilters            = "filters"
-	MsgSortCycle         = "sort_cycle"
+	MsgMixedScript         = "mixed_script"
+	MsgPhraseNotAllowed    = "phrase_not_allowed"
+	MsgFilterSearch        = "filter_search"
+	MsgFilterConfidence    = "filter_confidence"
+	MsgFilterPartOfSpeech  = "filter_part_of_speech"
+	MsgFilterSort          = "filter_sort"
+	MsgFilterClear         = "filter_clear"
+	MsgSortAlpha           = "sort_alpha"
+	MsgSortAlphaDesc       = "sort_alpha_desc"
+	MsgSortConfidence      = "sort_confidence"
+	MsgSortConfidenceDesc  = "sort_confidence_desc"
+	MsgSortNewest          = "sort_newest"
+	MsgSearchPrompt        = "search_prompt"
+	MsgNoResults           = "no_results"
+	MsgWordDetail          = "word_detail"
+	MsgFiltersScreen       = "filters_screen"
+	MsgFilters             = "filters"
+	MsgSortCycle           = "sort_cycle"
 )
 
 var SupportedLangs = []Lang{LangRU, LangEN}
@@ -112,13 +112,12 @@ func (ms *MessageSource) Get(lang Lang, key string, args ...any) string {
 	if !lang.IsValid() {
 		lang = LangRU
 	}
-	if msgs, ok := ms.messages[lang]; ok {
-		if msg, ok := msgs[key]; ok {
-			if len(args) > 0 {
-				return fmt.Sprintf(msg, args...)
-			}
-			return msg
-		}
+	msg, ok := ms.messages[lang][key]
+	if !ok {
+		return key
 	}
-	return key
+	if len(args) > 0 {
+		return fmt.Sprintf(msg, args...)
+	}
+	return msg
 }

@@ -89,10 +89,13 @@ func (h *Handler) buildText(letter string, verbs []Entity, page, total int, lang
 		if v.Original != "" {
 			line += h.msgSource.Get(lang, i18n.MsgVerbRowTranslation, v.Original)
 		}
-		b.WriteString(line + "\n")
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		b.WriteString(line)
 	}
 	totalPages := (total + verbsPerPage - 1) / verbsPerPage
-	b.WriteString(h.msgSource.Get(lang, i18n.MsgPageFooter,
+	b.WriteString("\n" + h.msgSource.Get(lang, i18n.MsgPageFooter,
 		h.msgSource.Get(lang, i18n.MsgPageInfo, page+1, totalPages),
 		h.msgSource.Get(lang, i18n.MsgTotalVerbs, total),
 	))

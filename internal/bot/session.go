@@ -9,8 +9,10 @@ import (
 
 type BotState string
 
-const StateIdle BotState = "IDLE"
-const StateWaitingForSearch BotState = "WAITING_FOR_SEARCH"
+const (
+	StateIdle             BotState = "IDLE"
+	StateWaitingForSearch BotState = "WAITING_FOR_SEARCH"
+)
 
 const (
 	CmdStart   = "start"
@@ -24,7 +26,7 @@ const (
 
 type WordListFilter struct {
 	Search       string
-	Confidence   int // 0 = all
+	Confidence   int    // 0 = all
 	PartOfSpeech string // "" = all
 	Sort         string // "alpha", "alpha_desc", "confidence", "confidence_desc", "newest"
 }
@@ -78,22 +80,14 @@ func (s *UserSession) SetLanguage(lang string) {
 func (s *UserSession) SetPendingWord(word, translation, partOfSpeech string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.pending == nil {
-		s.pending = make(map[string]pendingWord)
-	}
 	s.pending[word] = pendingWord{translation: translation, partOfSpeech: partOfSpeech}
 }
 
-func (s *UserSession) PendingTranslation(word string) string {
+func (s *UserSession) PendingWord(word string) (translation, partOfSpeech string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.pending[word].translation
-}
-
-func (s *UserSession) PendingPartOfSpeech(word string) string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.pending[word].partOfSpeech
+	p := s.pending[word]
+	return p.translation, p.partOfSpeech
 }
 
 func (s *UserSession) SetActiveLetter(letter string) {
@@ -150,7 +144,10 @@ func (sm *SessionManager) GetOrCreate(ctx context.Context, userID int64) *UserSe
 	if val, ok := sm.sessions.Load(userID); ok {
 		return val.(*UserSession)
 	}
-	s := &UserSession{state: StateIdle}
+	s := &UserSession{
+		state:   StateIdle,
+		pending: make(map[string]pendingWord),
+	}
 	if lang, err := sm.langRepo.GetLanguage(ctx, userID); err == nil && lang != "" {
 		s.language = lang
 	}

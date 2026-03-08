@@ -14,13 +14,13 @@ import (
 const (
 	wordsPerPage        = 8
 	CallbackWordPage    = bot.CallbackPrefixPage + "W_"
-	CallbackWordDetail  = bot.CallbackPrefixWord + "DT_"  // open word detail
+	CallbackWordDetail  = bot.CallbackPrefixWord + "DT_"   // open word detail
 	CallbackWordRate    = bot.CallbackPrefixWord + "RATE_" // RATE_{confidence}_{word}
 	CallbackWordDelete  = bot.CallbackPrefixWord + "DEL_"
 	CallbackWordConfDel = bot.CallbackPrefixConfirm + "DEL_"
 	CallbackWordBack    = bot.CallbackPrefixWord + "BACK"
 	CallbackWordSearch  = bot.CallbackPrefixWord + "SEARCH"
-	CallbackWordSort    = bot.CallbackPrefixWord + "SORT"   // cycles through sort options
+	CallbackWordSort    = bot.CallbackPrefixWord + "SORT"    // cycles through sort options
 	CallbackWordFilters = bot.CallbackPrefixWord + "FILTERS" // open filter screen
 	CallbackWordFilterC = bot.CallbackPrefixWord + "FC_"
 	CallbackWordFilterP = bot.CallbackPrefixWord + "FP_"
@@ -28,6 +28,14 @@ const (
 )
 
 var sortCycle = []string{"", "confidence", "confidence_desc", "alpha", "alpha_desc", "newest"}
+
+var sortNext = func() map[string]string {
+	m := make(map[string]string, len(sortCycle))
+	for i, s := range sortCycle {
+		m[s] = sortCycle[(i+1)%len(sortCycle)]
+	}
+	return m
+}()
 
 type Handler struct {
 	repo      Repository
@@ -62,7 +70,6 @@ func (h *Handler) HandleWordPage(ctx context.Context, b *tgbotapi.BotAPI, query 
 	return h.showPage(ctx, b, query, page, session)
 }
 
-// HandleWordDetail opens the detail view for a single word.
 func (h *Handler) HandleWordDetail(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, word string, session *bot.UserSession) error {
 	entity, err := h.repo.GetByWord(ctx, query.From.ID, word)
 	if err != nil {
@@ -70,27 +77,7 @@ func (h *Handler) HandleWordDetail(ctx context.Context, b *tgbotapi.BotAPI, quer
 	}
 	lang := session.Lang()
 	text := h.msgSource.Get(lang, i18n.MsgWordDetail, entity.Word, entity.Translation, entity.PartOfSpeech)
-
-	// star rating row
-	var starRow []tgbotapi.InlineKeyboardButton
-	for c := MinConfidence; c <= MaxConfidence; c++ {
-		star := "☆"
-		if c <= entity.Confidence {
-			star = "★"
-		}
-		starRow = append(starRow, tgbotapi.NewInlineKeyboardButtonData(
-			fmt.Sprintf("%s%d", star, c),
-			fmt.Sprintf("%s%d_%s", CallbackWordRate, c, word),
-		))
-	}
-
-	kb := tgbotapi.NewInlineKeyboardMarkup(
-		starRow,
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgConfirmDelete), CallbackWordDelete+word),
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgBackToList), CallbackWordBack),
-		),
-	)
+	kb := h.buildDetailKeyboard(lang, entity)
 	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &kb)
 	_, err = b.Send(msg)
 	return err
@@ -143,64 +130,19 @@ func (h *Handler) HandleWordSearch(ctx context.Context, b *tgbotapi.BotAPI, quer
 	return err
 }
 
-// HandleWordSort cycles through sort options on each tap.
 func (h *Handler) HandleWordSort(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
 	f := session.WordListFilter()
-	current := f.Sort
-	next := ""
-	for i, s := range sortCycle {
-		if s == current {
-			next = sortCycle[(i+1)%len(sortCycle)]
-			break
-		}
-	}
-	f.Sort = next
+	f.Sort = sortNext[f.Sort]
 	session.SetWordListFilter(f)
 	return h.showPage(ctx, b, query, session.WordListPage(), session)
 }
 
 // HandleWordFilters opens the filter screen.
 func (h *Handler) HandleWordFilters(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
-	userID := query.From.ID
 	lang := session.Lang()
 	f := session.WordListFilter()
-	parts, _ := h.repo.GetDistinctPartsOfSpeech(ctx, userID)
-
-	var rows [][]tgbotapi.InlineKeyboardButton
-
-	// confidence filter row
-	var confRow []tgbotapi.InlineKeyboardButton
-	for c := MinConfidence; c <= MaxConfidence; c++ {
-		label := fmt.Sprintf("%d★", c)
-		if f.Confidence == c {
-			label = bot.ActiveMark + label
-		}
-		confRow = append(confRow, tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("%s%d", CallbackWordFilterC, c)))
-	}
-	rows = append(rows, confRow)
-
-	// part of speech rows
-	if len(parts) > 0 {
-		var posRow []tgbotapi.InlineKeyboardButton
-		for _, p := range parts {
-			label := p
-			if f.PartOfSpeech == p {
-				label = bot.ActiveMark + p
-			}
-			posRow = append(posRow, tgbotapi.NewInlineKeyboardButtonData(label, CallbackWordFilterP+p))
-		}
-		rows = append(rows, posRow)
-	}
-
-	// clear + back
-	var actionRow []tgbotapi.InlineKeyboardButton
-	if f.Confidence > 0 || f.PartOfSpeech != "" {
-		actionRow = append(actionRow, tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgFilterClear), CallbackWordClear))
-	}
-	actionRow = append(actionRow, tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgBackToList), CallbackWordBack))
-	rows = append(rows, actionRow)
-
-	kb := tgbotapi.NewInlineKeyboardMarkup(rows...)
+	parts, _ := h.repo.GetDistinctPartsOfSpeech(ctx, query.From.ID)
+	kb := h.buildFiltersKeyboard(lang, f, parts)
 	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID,
 		h.msgSource.Get(lang, i18n.MsgFiltersScreen), &kb)
 	_, err := b.Send(msg)
@@ -232,10 +174,7 @@ func (h *Handler) HandleWordFilterPartOfSpeech(ctx context.Context, b *tgbotapi.
 }
 
 func (h *Handler) HandleWordClear(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
-	f := session.WordListFilter()
-	f.Confidence = 0
-	f.PartOfSpeech = ""
-	session.SetWordListFilter(f)
+	session.SetWordListFilter(bot.WordListFilter{Sort: session.WordListFilter().Sort})
 	return h.HandleWordFilters(ctx, b, query, "", session)
 }
 
@@ -257,26 +196,19 @@ func (h *Handler) loadPage(ctx context.Context, userID int64, f Filter, page int
 }
 
 func (h *Handler) showPage(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, page int, session *bot.UserSession) error {
-	d := h.loadPage(ctx, query.From.ID, toRepoFilter(session.WordListFilter()), page)
-	text := h.buildText(session.Lang(), session.WordListFilter(), d.words, d.page, d.total, d.totalPages)
-	keyboard := h.buildKeyboard(session.Lang(), session.WordListFilter(), d.words, d.page, d.total, d.totalPages)
-	_, err := b.Send(bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &keyboard))
+	lang, f := session.Lang(), session.WordListFilter()
+	d := h.loadPage(ctx, query.From.ID, f, page)
+	text := h.buildText(lang, f, d.words, d.page, d.total)
+	kb := h.buildKeyboard(lang, f, d.words, d.page, d.total)
+	_, err := b.Send(bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &kb))
 	return err
 }
 
 func (h *Handler) showPageMsg(ctx context.Context, b *tgbotapi.BotAPI, chatID, userID int64, page int, session *bot.UserSession) error {
-	d := h.loadPage(ctx, userID, toRepoFilter(session.WordListFilter()), page)
-	text := h.buildText(session.Lang(), session.WordListFilter(), d.words, d.page, d.total, d.totalPages)
-	keyboard := h.buildKeyboard(session.Lang(), session.WordListFilter(), d.words, d.page, d.total, d.totalPages)
-	_, err := b.Send(bot.NewMessageWithKeyboard(chatID, text, &keyboard))
+	lang, f := session.Lang(), session.WordListFilter()
+	d := h.loadPage(ctx, userID, f, page)
+	text := h.buildText(lang, f, d.words, d.page, d.total)
+	kb := h.buildKeyboard(lang, f, d.words, d.page, d.total)
+	_, err := b.Send(bot.NewMessageWithKeyboard(chatID, text, &kb))
 	return err
-}
-
-func toRepoFilter(f bot.WordListFilter) Filter {
-	return Filter{
-		Search:       f.Search,
-		Confidence:   f.Confidence,
-		PartOfSpeech: f.PartOfSpeech,
-		Sort:         f.Sort,
-	}
 }

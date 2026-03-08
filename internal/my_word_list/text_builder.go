@@ -8,7 +8,7 @@ import (
 	"Yulia-Lingo/internal/i18n"
 )
 
-func (h *Handler) buildText(lang i18n.Lang, f bot.WordListFilter, words []Entity, page, total, totalPages int) string {
+func (h *Handler) buildText(lang i18n.Lang, f bot.WordListFilter, words []Entity, page, total int) string {
 	var b strings.Builder
 	b.WriteString(h.msgSource.Get(lang, i18n.MsgMyWordListTitle) + "\n")
 	if len(words) == 0 {

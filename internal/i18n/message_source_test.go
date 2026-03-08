@@ -18,7 +18,7 @@ var allKeys = []string{
 	i18n.MsgPageInfo,
 	i18n.MsgTotalVerbs,
 	i18n.MsgBackToLetters,
-		i18n.MsgBackToList,
+	i18n.MsgBackToList,
 	i18n.MsgPrevious,
 	i18n.MsgNext,
 	i18n.MsgChooseLanguage,
@@ -68,6 +68,10 @@ var allKeys = []string{
 	i18n.MsgSortNewest,
 	i18n.MsgSearchPrompt,
 	i18n.MsgNoResults,
+	i18n.MsgWordDetail,
+	i18n.MsgFiltersScreen,
+	i18n.MsgFilters,
+	i18n.MsgSortCycle,
 }
 
 func newTestSource(t *testing.T) *i18n.MessageSource {

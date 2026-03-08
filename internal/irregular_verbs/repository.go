@@ -114,9 +114,9 @@ func (r *repository) insertVerbsFromFile(ctx context.Context, tx pgx.Tx) error {
 	}
 	for _, e := range entities {
 		e.Original = strings.TrimSpace(e.Original)
-		e.Verb = strings.ToLower(strings.TrimSpace(e.Verb))
-		e.Past = strings.ToLower(strings.TrimSpace(e.Past))
-		e.PastParticiple = strings.ToLower(strings.TrimSpace(e.PastParticiple))
+		e.Verb = normalise(e.Verb)
+		e.Past = normalise(e.Past)
+		e.PastParticiple = normalise(e.PastParticiple)
 		if e.Verb == "" || e.Past == "" || e.PastParticiple == "" {
 			r.log.Warn(ctx, "verb.skip_invalid", logger.Field{Key: "verb", Value: e.Verb})
 			continue
@@ -127,6 +127,8 @@ func (r *repository) insertVerbsFromFile(ctx context.Context, tx pgx.Tx) error {
 	}
 	return nil
 }
+
+func normalise(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
 
 func (r *repository) readFromFile(ctx context.Context) ([]Entity, error) {
 	file, err := excelize.OpenFile(r.filePath)

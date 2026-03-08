@@ -1,9 +1,12 @@
 package my_word_list
 
+import (
+	"strings"
+)
+
 const (
-	MinConfidence     = 1
-	MaxConfidence     = 5
-	DefaultConfidence = 1
+	MinConfidence = 1
+	MaxConfidence = 5
 )
 
 type Entity struct {
@@ -16,13 +19,13 @@ type Entity struct {
 
 func (e Entity) Stars() string {
 	const filled, empty = "★", "☆"
-	out := ""
+	var b strings.Builder
 	for i := 1; i <= MaxConfidence; i++ {
 		if i <= e.Confidence {
-			out += filled
+			b.WriteString(filled)
 		} else {
-			out += empty
+			b.WriteString(empty)
 		}
 	}
-	return out
+	return b.String()
 }
