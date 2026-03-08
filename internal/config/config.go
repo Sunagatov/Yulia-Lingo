@@ -41,8 +41,9 @@ type TelegramConfig struct {
 }
 
 type TranslateConfig struct {
-	APIURL  string
-	Timeout time.Duration
+	APIURL     string
+	DictAPIURL string
+	Timeout    time.Duration
 }
 
 type LoggingConfig struct {
@@ -83,8 +84,9 @@ func Load() (*Config, error) {
 			UpdateHandlerTimeout: getEnvDuration("TELEGRAM_UPDATE_HANDLER_TIMEOUT", 30*time.Second),
 		},
 		Translate: TranslateConfig{
-			APIURL:  getEnv("TRANSLATE_API_URL", "https://lingva.ml"),
-			Timeout: getEnvDuration("TRANSLATE_API_TIMEOUT", 10*time.Second),
+			APIURL:     getEnv("TRANSLATE_API_URL", "https://lingva.ml"),
+			DictAPIURL: getEnv("DICT_API_URL", "https://api.dictionaryapi.dev"),
+			Timeout:    getEnvDuration("TRANSLATE_API_TIMEOUT", 10*time.Second),
 		},
 		Logging: LoggingConfig{
 			Level:  getEnv("LOG_LEVEL", "info"),

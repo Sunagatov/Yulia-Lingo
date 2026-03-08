@@ -22,7 +22,7 @@ const (
 )
 
 type APIClient interface {
-	Translate(ctx context.Context, word string, targetLang string) (Translation, error)
+	Translate(ctx context.Context, word, sourceLang, targetLang string) (Translation, error)
 }
 
 type client struct {
@@ -46,9 +46,12 @@ func NewAPIClient(cfg *config.Config, log logger.Logger) APIClient {
 	}
 }
 
-func (c *client) Translate(ctx context.Context, word string, targetLang string) (Translation, error) {
+func (c *client) Translate(ctx context.Context, word, sourceLang, targetLang string) (Translation, error) {
 	if !isValidWord(word) {
 		return Translation{}, fmt.Errorf("invalid word: %s", word)
+	}
+	if sourceLang == "" {
+		sourceLang = string(i18n.LangEN)
 	}
 	if targetLang == "" {
 		targetLang = string(i18n.LangRU)
@@ -56,7 +59,7 @@ func (c *client) Translate(ctx context.Context, word string, targetLang string) 
 
 	var lastErr error
 	for attempt := range maxRetries {
-		t, err := c.doTranslate(ctx, word, targetLang)
+		t, err := c.doTranslate(ctx, word, sourceLang, targetLang)
 		if err == nil {
 			return t, nil
 		}
@@ -78,11 +81,11 @@ func (c *client) Translate(ctx context.Context, word string, targetLang string) 
 	return Translation{}, fmt.Errorf("translation failed after %d attempts: %w", maxRetries, lastErr)
 }
 
-func (c *client) doTranslate(ctx context.Context, word, targetLang string) (Translation, error) {
+func (c *client) doTranslate(ctx context.Context, word, sourceLang, targetLang string) (Translation, error) {
 	// Lingva API: GET /api/v1/{source}/{target}/{query}
 	reqURL := fmt.Sprintf("%s/api/v1/%s/%s/%s",
 		c.baseURL,
-		string(i18n.LangEN),
+		sourceLang,
 		targetLang,
 		url.PathEscape(word),
 	)

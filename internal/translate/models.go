@@ -1,7 +1,8 @@
 package translate
 
 type Translation struct {
-	Terms []string
+	Terms       []string
+	PartOfSpeech string
 }
 
 func (t Translation) FirstTranslation() string {

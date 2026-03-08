@@ -10,6 +10,7 @@ import (
 type BotState string
 
 const StateIdle BotState = "IDLE"
+const StateWaitingForSearch BotState = "WAITING_FOR_SEARCH"
 
 const (
 	CmdStart   = "start"
@@ -21,12 +22,26 @@ const (
 	ActiveMark = "✅ "
 )
 
+type WordListFilter struct {
+	Search       string
+	Confidence   int // 0 = all
+	PartOfSpeech string // "" = all
+	Sort         string // "alpha", "alpha_desc", "confidence", "confidence_desc", "newest"
+}
+
+type pendingWord struct {
+	translation  string
+	partOfSpeech string
+}
+
 type UserSession struct {
-	mu           sync.RWMutex
-	state        BotState
-	language     string
-	activeLetter string
-	pendingTrans map[string]string
+	mu             sync.RWMutex
+	state          BotState
+	language       string
+	activeLetter   string
+	pending        map[string]pendingWord
+	wordListFilter WordListFilter
+	wordListPage   int
 }
 
 func (s *UserSession) SetState(state BotState) {
@@ -60,19 +75,25 @@ func (s *UserSession) SetLanguage(lang string) {
 	s.language = lang
 }
 
-func (s *UserSession) SetPendingWord(word, translation string) {
+func (s *UserSession) SetPendingWord(word, translation, partOfSpeech string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.pendingTrans == nil {
-		s.pendingTrans = make(map[string]string)
+	if s.pending == nil {
+		s.pending = make(map[string]pendingWord)
 	}
-	s.pendingTrans[word] = translation
+	s.pending[word] = pendingWord{translation: translation, partOfSpeech: partOfSpeech}
 }
 
 func (s *UserSession) PendingTranslation(word string) string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.pendingTrans[word]
+	return s.pending[word].translation
+}
+
+func (s *UserSession) PendingPartOfSpeech(word string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pending[word].partOfSpeech
 }
 
 func (s *UserSession) SetActiveLetter(letter string) {
@@ -85,6 +106,30 @@ func (s *UserSession) ActiveLetter() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.activeLetter
+}
+
+func (s *UserSession) WordListFilter() WordListFilter {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.wordListFilter
+}
+
+func (s *UserSession) SetWordListFilter(f WordListFilter) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.wordListFilter = f
+}
+
+func (s *UserSession) WordListPage() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.wordListPage
+}
+
+func (s *UserSession) SetWordListPage(p int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.wordListPage = p
 }
 
 // LangLoader loads a user's persisted language preference.

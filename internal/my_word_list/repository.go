@@ -3,18 +3,19 @@ package my_word_list
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type Filter struct {
+	Search       string
+	Confidence   int
+	PartOfSpeech string
+	Sort         string
+}
+
 const (
-	getPageQuery = `
-		SELECT id, word, part_of_speech, translation, confidence
-		FROM words
-		WHERE user_id = $1
-		ORDER BY confidence ASC, word ASC
-		LIMIT $2 OFFSET $3`
-	getTotalQuery         = `SELECT COUNT(*) FROM words WHERE user_id = $1`
 	saveWordQuery         = `INSERT INTO words (user_id, word, part_of_speech, translation, confidence) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, word) DO NOTHING`
 	getByWordQuery        = `SELECT id, word, part_of_speech, translation, confidence FROM words WHERE user_id = $1 AND word = $2`
 	deleteWordQuery       = `DELETE FROM words WHERE user_id = $1 AND word = $2`
@@ -62,9 +63,10 @@ const (
 )
 
 type Repository interface {
-	GetPage(ctx context.Context, userID int64, offset, limit int) ([]Entity, error)
 	GetByWord(ctx context.Context, userID int64, word string) (Entity, error)
-	GetTotal(ctx context.Context, userID int64) (int, error)
+	GetPageFiltered(ctx context.Context, userID int64, f Filter, offset, limit int) ([]Entity, error)
+	GetTotalFiltered(ctx context.Context, userID int64, f Filter) (int, error)
+	GetDistinctPartsOfSpeech(ctx context.Context, userID int64) ([]string, error)
 	Save(ctx context.Context, userID int64, word, partOfSpeech, translation string) error
 	SetConfidence(ctx context.Context, userID int64, word string, confidence int) error
 	Delete(ctx context.Context, userID int64, word string) error
@@ -77,29 +79,6 @@ type repository struct {
 
 func NewRepository(db *pgxpool.Pool) Repository {
 	return &repository{db: db}
-}
-
-func (r *repository) GetPage(ctx context.Context, userID int64, offset, limit int) ([]Entity, error) {
-	rows, err := r.db.Query(ctx, getPageQuery, userID, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("query page: %w", err)
-	}
-	defer rows.Close()
-	var entities []Entity
-	for rows.Next() {
-		var e Entity
-		if err := rows.Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Translation, &e.Confidence); err != nil {
-			return nil, fmt.Errorf("scan: %w", err)
-		}
-		entities = append(entities, e)
-	}
-	return entities, rows.Err()
-}
-
-func (r *repository) GetTotal(ctx context.Context, userID int64) (int, error) {
-	var total int
-	err := r.db.QueryRow(ctx, getTotalQuery, userID).Scan(&total)
-	return total, err
 }
 
 func (r *repository) Save(ctx context.Context, userID int64, word, partOfSpeech, translation string) error {
@@ -127,6 +106,79 @@ func (r *repository) Delete(ctx context.Context, userID int64, word string) erro
 		return fmt.Errorf("delete word: %w", err)
 	}
 	return nil
+}
+
+func (r *repository) GetDistinctPartsOfSpeech(ctx context.Context, userID int64) ([]string, error) {
+	rows, err := r.db.Query(ctx, `SELECT DISTINCT part_of_speech FROM words WHERE user_id = $1 AND part_of_speech != '' ORDER BY part_of_speech`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var parts []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err == nil {
+			parts = append(parts, p)
+		}
+	}
+	return parts, rows.Err()
+}
+
+func (r *repository) buildFilteredQuery(userID int64, f Filter, extra string) (string, []any) {
+	args := []any{userID}
+	conds := []string{"user_id = $1"}
+	if f.Search != "" {
+		args = append(args, "%"+strings.ToLower(f.Search)+"%")
+		conds = append(conds, fmt.Sprintf("LOWER(word) LIKE $%d", len(args)))
+	}
+	if f.Confidence > 0 {
+		args = append(args, f.Confidence)
+		conds = append(conds, fmt.Sprintf("confidence = $%d", len(args)))
+	}
+	if f.PartOfSpeech != "" {
+		args = append(args, f.PartOfSpeech)
+		conds = append(conds, fmt.Sprintf("part_of_speech = $%d", len(args)))
+	}
+	allowedSort := map[string]string{
+		"alpha":           "word ASC",
+		"alpha_desc":      "word DESC",
+		"confidence":      "confidence ASC, word ASC",
+		"confidence_desc": "confidence DESC, word ASC",
+		"newest":          "id DESC",
+	}
+	orderBy, ok := allowedSort[f.Sort]
+	if !ok {
+		orderBy = "confidence ASC, word ASC"
+	}
+	q := fmt.Sprintf("SELECT id, word, part_of_speech, translation, confidence FROM words WHERE %s ORDER BY %s %s",
+		strings.Join(conds, " AND "), orderBy, extra)
+	return q, args
+}
+
+func (r *repository) GetPageFiltered(ctx context.Context, userID int64, f Filter, offset, limit int) ([]Entity, error) {
+	q, args := r.buildFilteredQuery(userID, f, fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset))
+	rows, err := r.db.Query(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query filtered: %w", err)
+	}
+	defer rows.Close()
+	var entities []Entity
+	for rows.Next() {
+		var e Entity
+		if err := rows.Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Translation, &e.Confidence); err != nil {
+			return nil, err
+		}
+		entities = append(entities, e)
+	}
+	return entities, rows.Err()
+}
+
+func (r *repository) GetTotalFiltered(ctx context.Context, userID int64, f Filter) (int, error) {
+	q, args := r.buildFilteredQuery(userID, f, "")
+	countQ := "SELECT COUNT(*) FROM (" + q + ") sub"
+	var total int
+	err := r.db.QueryRow(ctx, countQ, args...).Scan(&total)
+	return total, err
 }
 
 func (r *repository) Initialize(ctx context.Context) error {
