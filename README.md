@@ -1,184 +1,171 @@
-# Yulia Lingo
+<div align="center">
+  <br>
+  <h1>🇬🇧 Yulia Lingo</h1>
+  <p><strong>A Telegram English learning bot — study irregular verbs, build your word list, and translate on the go.</strong></p>
+  <p>
+    <a href="https://t.me/zufarexplained">💬 Community</a> ·
+    <a href="https://github.com/Sunagatov/Yulia-Lingo/issues?q=is%3Aopen+label%3A%22good+first+issue%22">🟢 Good First Issues</a> ·
+    <a href="https://github.com/Sunagatov/Yulia-Lingo/issues">🐛 Issues</a>
+  </p>
 
-[![ci Status](https://github.com/Sunagatov/Iced-Latte/actions/workflows/dev-branch-pr-deployment-pipeline.yml/badge.svg)](https://github.com/Sunagatov/Iced-Latte/actions)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/danilqa/node-file-router/blob/main/LICENSE)
-[![Docker Pulls](https://img.shields.io/docker/pulls/zufarexplainedit/yulia-lingo-backend.svg)](https://hub.docker.com/r/zufarexplainedit/yulia-lingo-backend/)
-[![GitHub issues](https://img.shields.io/github/issues/Sunagatov/Yulia-Lingo)](https://github.com/Sunagatov/Yulia-Lingo/issues)
-[![GitHub stars](https://img.shields.io/github/stars/Sunagatov/Yulia-Lingo)](https://github.com/Sunagatov/Yulia-Lingo/stargazers)
+  [![License: CC BY-NC 4.0](https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
+  [![Docker Pulls](https://img.shields.io/docker/pulls/zufarexplainedit/yulia-lingo-backend.svg)](https://hub.docker.com/r/zufarexplainedit/yulia-lingo-backend/)
+  [![GitHub Stars](https://img.shields.io/github/stars/Sunagatov/Yulia-Lingo)](https://github.com/Sunagatov/Yulia-Lingo/stargazers)
+  [![GitHub Issues](https://img.shields.io/github/issues/Sunagatov/Yulia-Lingo)](https://github.com/Sunagatov/Yulia-Lingo/issues)
+</div>
 
-**Yulia-Lingo** is a modern, secure English Learning Telegram Bot built with Go.
+---
 
-## Table of Contents
+## 🚀 Quick Start
 
-- [Prerequisites](#prerequisites)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Security Features](#security-features)
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Configuration](#configuration)
-- [Development](#development)
-- [Contributing](#contributing)
-- [Code of Conduct](#code-of-conduct)
-- [License](#license)
-- [Contact](#contact)
+**📋 Prerequisites:** Go 1.21+, PostgreSQL 17+, Docker Desktop, Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
 
-## Prerequisites
-
-- Go 1.26 or higher
-- PostgreSQL 17+
-- Docker and Docker Compose (optional)
-- Telegram Bot Token
-
-## Tech Stack
-
-- **Language:** Go 1.26
-- **Architecture:** Clean Architecture with Dependency Injection
-- **Database:** PostgreSQL with connection pooling
-- **Telegram Bot API:** github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
-- **Logging:** Structured JSON logging with Logrus
-- **Configuration:** Environment-based configuration
-- **Containerization:** Docker with multi-stage builds
-
-## Architecture
-
-The application follows Clean Architecture principles with clear separation of concerns:
-
-```
-cmd/app/                 # Application entry point
-internal/
-├── config/             # Configuration management
-├── database/           # Database connection and management
-├── logger/             # Structured logging
-├── telegram/           # Telegram bot management
-│   └── handlers/       # Message and callback handlers
-├── irregular_verbs/    # Irregular verbs domain
-├── my_word_list/       # Word list domain
-├── translate/          # Translation service
-└── util/              # Shared utilities
-```
-
-## Security Features
-
-- **Input Validation:** All user inputs are validated and sanitized
-- **SQL Injection Prevention:** Parameterized queries and prepared statements
-- **SSRF Protection:** URL allowlisting for external API calls
-- **Log Injection Prevention:** Structured logging with input sanitization
-- **Secure Configuration:** Environment-based secrets management
-- **Resource Management:** Proper connection pooling and cleanup
-- **Concurrency Control:** Limited goroutine spawning to prevent resource exhaustion
-
-## Quick Start
-
-### Using Docker Compose (Recommended)
-
-1. Clone the repository:
 ```bash
-git clone https://github.com/Sunagatov/Yulia-Lingo.git
-cd Yulia-Lingo
+# 1. 📥 Clone
+git clone https://github.com/Sunagatov/Yulia-Lingo.git && cd Yulia-Lingo
+
+# 2. 🔧 Fill in your credentials
+# edit TELEGRAM_BOT_TOKEN and POSTGRESQL_PASSWORD in .env
 ```
 
-2. Copy and configure environment variables:
+---
+
+### Option A — Local Go + infra in Docker *(recommended for development)*
+
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+# Start only PostgreSQL
+docker compose up -d postgres
 ```
 
-3. Start the application:
-```bash
-docker-compose up -d
-```
+Then run the app from the terminal:
 
-### Manual Setup
-
-1. Install dependencies:
-```bash
-go mod download
-```
-
-2. Set up PostgreSQL database and configure environment variables
-
-3. Run the application:
 ```bash
 go run cmd/app/main.go
 ```
 
-## Features
+---
 
-- **Irregular Verbs Learning:** Interactive study of English irregular verbs
-- **Personal Word Lists:** Create and manage custom vocabulary lists
-- **Translation Service:** Real-time word translation with multiple meanings
-- **Pagination:** Efficient browsing through large datasets
-- **Structured Logging:** Comprehensive logging for monitoring and debugging
-- **Health Checks:** Database connectivity monitoring
-- **Graceful Shutdown:** Proper resource cleanup on termination
+### Option B — Everything in Docker
 
-## Configuration
+```bash
+docker compose up -d --build
+```
 
-The application uses environment variables for configuration. See `.env.example` for all available options:
+**Production:**
+```bash
+# Fill in .env.prod, then:
+docker compose -f docker-compose.prod.yml up -d --build
+```
 
-### Required Variables
-- `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
-- `POSTGRESQL_PASSWORD`: Database password
+---
 
-### Optional Variables
-- `POSTGRESQL_HOST`: Database host (default: localhost)
-- `POSTGRESQL_PORT`: Database port (default: 5432)
-- `POSTGRESQL_USER`: Database user (default: postgres)
-- `POSTGRESQL_DATABASE_NAME`: Database name (default: yulia_lingo)
-- `LOG_LEVEL`: Logging level (debug, info, warn, error)
-- `IRREGULAR_VERBS_FILE_PATH`: Path to irregular verbs Excel file
-
-## Development
-
-### Running Tests
+**🧪 Run the tests:**
 ```bash
 go test ./...
 ```
 
-### Code Quality
-The project includes comprehensive security scanning and follows Go best practices:
-- SOLID principles implementation
-- Dependency injection
-- Interface-based design
-- Comprehensive error handling
-- Resource leak prevention
+---
 
-### Building
-```bash
-go build -o yulia-lingo cmd/app/main.go
+## 🤔 What is this?
+
+Yulia Lingo is a Telegram bot that helps you learn English interactively. Practice irregular verbs with quizzes, build a personal vocabulary list, and get instant word translations — all without leaving Telegram.
+
+---
+
+## 🛠️ Tech Stack
+
+| 📂 Category | 🔧 Technology |
+|---|---|
+| 💻 Language | Go 1.21 |
+| 🗄️ Database | PostgreSQL 17 |
+| 🤖 Telegram | go-telegram-bot-api v5 |
+| 📝 Logging | Logrus (structured JSON) |
+| 🚢 Deployment | Docker (multi-stage build) |
+
+---
+
+## ✨ Features
+
+- 📚 **Irregular verbs** — interactive quiz to practice all three verb forms
+- 📝 **Personal word list** — save, browse, and remove your own vocabulary
+- 🔍 **Translation** — instant word translation with multiple meanings
+- 📄 **Pagination** — smooth browsing through large word sets
+- 🔒 **Secure** — parameterized queries, input sanitization, SSRF protection
+- 🛑 **Graceful shutdown** — clean resource release on SIGTERM
+
+---
+
+## 🤖 Commands
+
+| 🎯 Command | 📝 Description |
+|---|---|
+| `/start` | Welcome message and main menu |
+| `/irregular_verbs` | Start irregular verbs practice |
+| `/my_word_list` | View and manage your word list |
+| `/translate` | Translate a word |
+| `/cancel` | Cancel the current operation |
+
+---
+
+## 📁 Project Structure
+
+```
+cmd/app/                 # Application entry point
+internal/
+├── config/             # Environment-based configuration
+├── database/           # PostgreSQL connection and pooling
+├── logger/             # Structured logging
+├── telegram/           # Bot setup and update routing
+│   └── handlers/       # Command and callback handlers
+├── irregular_verbs/    # Irregular verbs domain
+├── my_word_list/       # Personal word list domain
+├── translate/          # Translation service
+└── util/               # Shared utilities
 ```
 
-## Contributing
+---
 
-Interested in contributing? Read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+## ⚙️ Environment Variables
 
-## Code of Conduct
+| Variable | Required | Description |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | ✅ | Token from @BotFather |
+| `POSTGRESQL_PASSWORD` | ✅ | Database password |
+| `POSTGRESQL_HOST` | ❌ | Defaults to `localhost` |
+| `POSTGRESQL_PORT` | ❌ | Defaults to `5432` |
+| `POSTGRESQL_USER` | ❌ | Defaults to `postgres` |
+| `POSTGRESQL_DATABASE_NAME` | ❌ | Defaults to `yulia_lingo` |
+| `LOG_LEVEL` | ❌ | `debug`, `info`, `warn`, `error` |
+| `IRREGULAR_VERBS_FILE_PATH` | ❌ | Path to irregular verbs Excel file |
 
-Please read our [Code of Conduct](CODE_OF_CONDUCT.md) to keep our community approachable and respectable.
+See `.env` for local defaults and `.env.prod` for the production template.
 
-## License
+---
 
-This project is licensed under the [MIT License](LICENSE).
+## 🤝 Contributing
 
-## Contact
+🎉 Contributions are welcome.
 
-Have any questions or suggestions? Feel free to [open an issue](https://github.com/Sunagatov/Yulia-Lingo/issues) or contact us directly.
+| 🎯 Situation | 🚀 Action |
+|---|---|
+| 🐛 Found a bug | [Open an issue](https://github.com/Sunagatov/Yulia-Lingo/issues/new) with the `bug` label |
+| 💡 Want a feature | Start a [Discussion](https://github.com/Sunagatov/Yulia-Lingo/discussions) first |
+| 👨‍💻 Ready to code | Pick a [`good first issue`](https://github.com/Sunagatov/Yulia-Lingo/issues?q=is%3Aopen+label%3A%22good+first+issue%22), comment "I'm on it" |
+| 🔧 Big change | Comment on the issue before writing code — tickets may have hidden constraints |
 
-## FAQ
+---
 
-### How do I set up the project?
-Follow the instructions in the [Quick Start](#quick-start) section above.
+## 📄 License
 
-### Where can I find API documentation?
-The bot uses Telegram Bot API. Internal API documentation is available through code comments and interfaces.
+📜 [CC BY-NC 4.0](LICENSE) — free for educational and personal use with author attribution. Commercial use requires explicit written permission from the author ([zufar.sunagatov@gmail.com](mailto:zufar.sunagatov@gmail.com)).
 
-### How do I report security vulnerabilities?
-Please see our [Security Policy](SECURITY.md) for reporting security issues.
+---
 
-### What databases are supported?
-Currently, the application supports PostgreSQL 17+. The database layer is abstracted and can be extended for other databases.
+## 📞 Contact
 
-## Community and Support
+- 💬 **Telegram community:** [Zufar Explained IT](https://t.me/zufarexplained)
+- 👤 **Personal Telegram:** [@lucky_1uck](https://web.telegram.org/k/#@lucky_1uck)
+- 📧 **Email:** [zufar.sunagatov@gmail.com](mailto:zufar.sunagatov@gmail.com)
+- 🐛 **Issues:** [GitHub Issues](https://github.com/Sunagatov/Yulia-Lingo/issues)
 
-Join our community at https://t.me/zufarexplained for support and discussions!
+❤️

@@ -24,10 +24,12 @@ const (
 	CallbackWordFilters = bot.CallbackPrefixWord + "FILTERS" // open filter screen
 	CallbackWordFilterC = bot.CallbackPrefixWord + "FC_"
 	CallbackWordFilterP = bot.CallbackPrefixWord + "FP_"
+	CallbackWordFilterL = bot.CallbackPrefixWord + "FL_"
+	CallbackWordFilterD = bot.CallbackPrefixWord + "FD_"
 	CallbackWordClear   = bot.CallbackPrefixWord + "CLEAR"
 )
 
-var sortCycle = []string{"", "confidence", "confidence_desc", "alpha", "alpha_desc", "newest"}
+var sortCycle = []string{"", "confidence", "confidence_desc", "alpha", "alpha_desc", "newest", "oldest"}
 
 var sortNext = func() map[string]string {
 	m := make(map[string]string, len(sortCycle))
@@ -142,7 +144,8 @@ func (h *Handler) HandleWordFilters(ctx context.Context, b *tgbotapi.BotAPI, que
 	lang := session.Lang()
 	f := session.WordListFilter()
 	parts, _ := h.repo.GetDistinctPartsOfSpeech(ctx, query.From.ID)
-	kb := h.buildFiltersKeyboard(lang, f, parts)
+	letters, _ := h.repo.GetDistinctFirstLetters(ctx, query.From.ID)
+	kb := h.buildFiltersKeyboard(lang, f, parts, letters)
 	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID,
 		h.msgSource.Get(lang, i18n.MsgFiltersScreen), &kb)
 	_, err := b.Send(msg)
@@ -173,11 +176,34 @@ func (h *Handler) HandleWordFilterPartOfSpeech(ctx context.Context, b *tgbotapi.
 	return h.HandleWordFilters(ctx, b, query, "", session)
 }
 
+func (h *Handler) HandleWordFilterLetter(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, letter string, session *bot.UserSession) error {
+	f := session.WordListFilter()
+	if f.Letter == letter {
+		f.Letter = ""
+	} else {
+		f.Letter = letter
+	}
+	session.SetWordListFilter(f)
+	return h.HandleWordFilters(ctx, b, query, "", session)
+}
+
+func (h *Handler) HandleWordFilterDays(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, data string, session *bot.UserSession) error {
+	var days int
+	fmt.Sscanf(data, "%d", &days)
+	f := session.WordListFilter()
+	if f.AddedDays == days {
+		f.AddedDays = 0
+	} else {
+		f.AddedDays = days
+	}
+	session.SetWordListFilter(f)
+	return h.HandleWordFilters(ctx, b, query, "", session)
+}
+
 func (h *Handler) HandleWordClear(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
 	session.SetWordListFilter(bot.WordListFilter{Sort: session.WordListFilter().Sort})
 	return h.HandleWordFilters(ctx, b, query, "", session)
 }
-
 type pageData struct {
 	words      []Entity
 	total      int

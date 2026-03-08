@@ -16,14 +16,16 @@ const (
 	getByWordQuery        = `SELECT id, word, part_of_speech, translation, confidence FROM words WHERE user_id = $1 AND word = $2`
 	deleteWordQuery       = `DELETE FROM words WHERE user_id = $1 AND word = $2`
 	setConfidenceQuery    = `UPDATE words SET confidence = $1 WHERE user_id = $2 AND word = $3`
+	getTotalQuery         = `SELECT COUNT(*) FROM words WHERE user_id = $1`
 	createWordsTableQuery = `
 		CREATE TABLE IF NOT EXISTS words (
-			id            SERIAL PRIMARY KEY,
-			user_id       BIGINT NOT NULL,
-			word          VARCHAR(255) NOT NULL,
+			id             SERIAL PRIMARY KEY,
+			user_id        BIGINT NOT NULL,
+			word           VARCHAR(255) NOT NULL,
 			part_of_speech VARCHAR(50) NOT NULL DEFAULT 'word',
-			translation   VARCHAR(255) NOT NULL DEFAULT '',
-			confidence    SMALLINT NOT NULL DEFAULT 1,
+			translation    VARCHAR(255) NOT NULL DEFAULT '',
+			confidence     SMALLINT NOT NULL DEFAULT 1,
+			created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			CONSTRAINT words_user_word_unique UNIQUE (user_id, word)
 		)`
 	migrateWordsTableQuery = `
@@ -56,13 +58,16 @@ const (
 			END IF;
 		END$$`
 	createWordsIndexQuery = `CREATE INDEX IF NOT EXISTS idx_words_user_id ON words(user_id)`
+	migrateCreatedAtQuery = `ALTER TABLE words ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
 )
 
 type Repository interface {
 	GetByWord(ctx context.Context, userID int64, word string) (Entity, error)
 	GetPageFiltered(ctx context.Context, userID int64, f Filter, offset, limit int) ([]Entity, error)
 	GetTotalFiltered(ctx context.Context, userID int64, f Filter) (int, error)
+	GetTotal(ctx context.Context, userID int64) (int, error)
 	GetDistinctPartsOfSpeech(ctx context.Context, userID int64) ([]string, error)
+	GetDistinctFirstLetters(ctx context.Context, userID int64) ([]string, error)
 	Save(ctx context.Context, userID int64, word, partOfSpeech, translation string) error
 	SetConfidence(ctx context.Context, userID int64, word string, confidence int) error
 	Delete(ctx context.Context, userID int64, word string) error
@@ -104,6 +109,27 @@ func (r *repository) Delete(ctx context.Context, userID int64, word string) erro
 	return nil
 }
 
+func (r *repository) GetTotal(ctx context.Context, userID int64) (int, error) {
+	var total int
+	err := r.db.QueryRow(ctx, getTotalQuery, userID).Scan(&total)
+	return total, err
+}
+
+func (r *repository) GetDistinctFirstLetters(ctx context.Context, userID int64) ([]string, error) {
+	rows, err := r.db.Query(ctx, `SELECT DISTINCT UPPER(LEFT(word,1)) FROM words WHERE user_id = $1 ORDER BY 1`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var letters []string
+	for rows.Next() {
+		var l string
+		if err := rows.Scan(&l); err == nil {
+			letters = append(letters, l)
+		}
+	}
+	return letters, rows.Err()
+}
 func (r *repository) GetDistinctPartsOfSpeech(ctx context.Context, userID int64) ([]string, error) {
 	rows, err := r.db.Query(ctx, `SELECT DISTINCT part_of_speech FROM words WHERE user_id = $1 AND part_of_speech != '' ORDER BY part_of_speech`, userID)
 	if err != nil {
@@ -127,6 +153,10 @@ func (r *repository) buildFilteredQuery(userID int64, f Filter, extra string) (s
 		args = append(args, "%"+strings.ToLower(f.Search)+"%")
 		conds = append(conds, fmt.Sprintf("LOWER(word) LIKE $%d", len(args)))
 	}
+	if f.Letter != "" {
+		args = append(args, strings.ToLower(f.Letter)+"%")
+		conds = append(conds, fmt.Sprintf("word LIKE $%d", len(args)))
+	}
 	if f.Confidence > 0 {
 		args = append(args, f.Confidence)
 		conds = append(conds, fmt.Sprintf("confidence = $%d", len(args)))
@@ -135,12 +165,17 @@ func (r *repository) buildFilteredQuery(userID int64, f Filter, extra string) (s
 		args = append(args, f.PartOfSpeech)
 		conds = append(conds, fmt.Sprintf("part_of_speech = $%d", len(args)))
 	}
+	if f.AddedDays > 0 {
+		args = append(args, f.AddedDays)
+		conds = append(conds, fmt.Sprintf("created_at >= NOW() - ($%d || ' days')::INTERVAL", len(args)))
+	}
 	allowedSort := map[string]string{
 		"alpha":           "word ASC",
 		"alpha_desc":      "word DESC",
 		"confidence":      "confidence ASC, word ASC",
 		"confidence_desc": "confidence DESC, word ASC",
-		"newest":          "id DESC",
+		"newest":          "created_at DESC",
+		"oldest":          "created_at ASC",
 	}
 	orderBy, ok := allowedSort[f.Sort]
 	if !ok {
@@ -178,7 +213,7 @@ func (r *repository) GetTotalFiltered(ctx context.Context, userID int64, f Filte
 }
 
 func (r *repository) Initialize(ctx context.Context) error {
-	for _, q := range []string{createWordsTableQuery, migrateWordsTableQuery, createWordsIndexQuery} {
+	for _, q := range []string{createWordsTableQuery, migrateWordsTableQuery, migrateCreatedAtQuery, createWordsIndexQuery} {
 		if _, err := r.db.Exec(ctx, q); err != nil {
 			return fmt.Errorf("exec schema: %w", err)
 		}

@@ -28,7 +28,9 @@ type WordListFilter struct {
 	Search       string
 	Confidence   int    // 0 = all
 	PartOfSpeech string // "" = all
-	Sort         string // "alpha", "alpha_desc", "confidence", "confidence_desc", "newest"
+	Sort         string // "alpha", "alpha_desc", "confidence", "confidence_desc", "newest", "oldest"
+	Letter       string // "" = all, "A"–"Z"
+	AddedDays    int    // 0 = all, 7 = last 7 days, 30 = last 30 days
 }
 
 type pendingWord struct {

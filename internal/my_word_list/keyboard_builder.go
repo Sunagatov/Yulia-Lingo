@@ -37,7 +37,11 @@ func (h *Handler) buildKeyboard(lang i18n.Lang, f bot.WordListFilter, words []En
 	for _, w := range words {
 		label := w.Word
 		if w.Translation != "" {
-			label += " — " + w.Translation
+			tr := w.Translation
+			if len([]rune(tr)) > 18 {
+				tr = string([]rune(tr)[:18]) + "…"
+			}
+			label += " — " + tr
 		}
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(label, CallbackWordDetail+w.Word),
@@ -64,28 +68,35 @@ func (h *Handler) buildKeyboard(lang i18n.Lang, f bot.WordListFilter, words []En
 	}
 	rows = append(rows, nav)
 
-	// controls row: search · sort (cycling) · filters
-	sortBtn := h.msgSource.Get(lang, i18n.MsgSortCycle, sortOptionLabel(lang, f.Sort, h.msgSource))
 	searchBtn := h.msgSource.Get(lang, i18n.MsgFilterSearch)
 	if f.Search != "" {
 		searchBtn = fmt.Sprintf("🔍 \"%s\"", f.Search)
 	}
+	sortBtn := h.msgSource.Get(lang, i18n.MsgFilterSort)
+	if f.Sort != "" {
+		sortBtn += " ✅"
+	}
 	filtersBtn := h.msgSource.Get(lang, i18n.MsgFilters)
-	if f.Confidence > 0 || f.PartOfSpeech != "" {
+	if f.Confidence > 0 || f.PartOfSpeech != "" || f.Letter != "" || f.AddedDays > 0 {
 		filtersBtn += " ✅"
 	}
-	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData(searchBtn, CallbackWordSearch),
-		tgbotapi.NewInlineKeyboardButtonData(sortBtn, CallbackWordSort),
-		tgbotapi.NewInlineKeyboardButtonData(filtersBtn, CallbackWordFilters),
-	))
+	rows = append(rows,
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(searchBtn, CallbackWordSearch),
+			tgbotapi.NewInlineKeyboardButtonData(sortBtn, CallbackWordSort),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(filtersBtn, CallbackWordFilters),
+		),
+	)
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
 }
 
-func (h *Handler) buildFiltersKeyboard(lang i18n.Lang, f bot.WordListFilter, parts []string) tgbotapi.InlineKeyboardMarkup {
+func (h *Handler) buildFiltersKeyboard(lang i18n.Lang, f bot.WordListFilter, parts, letters []string) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
 
+	// confidence row
 	var confRow []tgbotapi.InlineKeyboardButton
 	for c := MinConfidence; c <= MaxConfidence; c++ {
 		label := fmt.Sprintf("%d★", c)
@@ -96,6 +107,27 @@ func (h *Handler) buildFiltersKeyboard(lang i18n.Lang, f bot.WordListFilter, par
 	}
 	rows = append(rows, confRow)
 
+	// first letter rows
+	if len(letters) > 0 {
+		const lettersPerRow = 8
+		var row []tgbotapi.InlineKeyboardButton
+		for _, l := range letters {
+			label := l
+			if f.Letter == l {
+				label = bot.ActiveMark + l
+			}
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(label, CallbackWordFilterL+l))
+			if len(row) == lettersPerRow {
+				rows = append(rows, row)
+				row = nil
+			}
+		}
+		if len(row) > 0 {
+			rows = append(rows, row)
+		}
+	}
+
+	// part of speech row
 	if len(parts) > 0 {
 		var posRow []tgbotapi.InlineKeyboardButton
 		for _, p := range parts {
@@ -108,8 +140,9 @@ func (h *Handler) buildFiltersKeyboard(lang i18n.Lang, f bot.WordListFilter, par
 		rows = append(rows, posRow)
 	}
 
-	actionRow := []tgbotapi.InlineKeyboardButton{}
-	if f.Confidence > 0 || f.PartOfSpeech != "" || f.Search != "" {
+	// action row
+	var actionRow []tgbotapi.InlineKeyboardButton
+	if f.Confidence > 0 || f.PartOfSpeech != "" || f.Search != "" || f.Letter != "" || f.AddedDays > 0 {
 		actionRow = append(actionRow, tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgFilterClear), CallbackWordClear))
 	}
 	actionRow = append(actionRow, tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgBackToList), CallbackWordBack))
@@ -126,6 +159,7 @@ func sortOptionLabel(lang i18n.Lang, sort string, ms *i18n.MessageSource) string
 		"alpha":           i18n.MsgSortAlpha,
 		"alpha_desc":      i18n.MsgSortAlphaDesc,
 		"newest":          i18n.MsgSortNewest,
+		"oldest":          i18n.MsgSortOldest,
 	}
 	key, ok := keys[sort]
 	if !ok {

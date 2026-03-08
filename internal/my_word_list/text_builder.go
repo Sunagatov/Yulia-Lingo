@@ -12,23 +12,31 @@ func (h *Handler) buildText(lang i18n.Lang, f bot.WordListFilter, words []Entity
 	var b strings.Builder
 	b.WriteString(h.msgSource.Get(lang, i18n.MsgMyWordListTitle) + "\n")
 	if len(words) == 0 {
-		if f.Search != "" || f.Confidence > 0 || f.PartOfSpeech != "" {
+		if f.Search != "" || f.Confidence > 0 || f.PartOfSpeech != "" || f.Letter != "" || f.AddedDays > 0 {
 			b.WriteString("\n" + h.msgSource.Get(lang, i18n.MsgNoResults))
 		} else {
 			b.WriteString("\n" + h.msgSource.Get(lang, i18n.MsgWordListEmpty))
 		}
 		return b.String()
 	}
-	// active filter summary
 	var filters []string
 	if f.Search != "" {
 		filters = append(filters, fmt.Sprintf("🔍 \"%s\"", f.Search))
+	}
+	if f.Letter != "" {
+		filters = append(filters, f.Letter+"…")
 	}
 	if f.Confidence > 0 {
 		filters = append(filters, fmt.Sprintf("%d★", f.Confidence))
 	}
 	if f.PartOfSpeech != "" {
 		filters = append(filters, f.PartOfSpeech)
+	}
+	if f.AddedDays > 0 {
+		filters = append(filters, fmt.Sprintf("%d★", f.Confidence))
+	}
+	if f.AddedDays > 0 {
+		filters = append(filters, h.msgSource.Get(lang, i18n.MsgFilterDays, f.AddedDays))
 	}
 	if len(filters) > 0 {
 		b.WriteString("_" + strings.Join(filters, " · ") + "_\n")
