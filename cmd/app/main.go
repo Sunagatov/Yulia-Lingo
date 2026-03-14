@@ -117,9 +117,7 @@ func run() error {
 	callbackRouter.Register(my_word_list.CallbackWordClear, wordListHandler.HandleWordClear)
 	callbackRouter.Register(my_word_list.CallbackImportSave, wordListHandler.HandleImportSave)
 	callbackRouter.Register(my_word_list.CallbackImportCancel, wordListHandler.HandleImportCancel)
-	callbackRouter.Register(translate.CallbackWordSave, translateHandler.HandleWordSave)
-	callbackRouter.Register(translate.CallbackWordConfirm, translateHandler.HandleWordConfirm)
-	callbackRouter.Register(translate.CallbackWordCancel, translateHandler.HandleWordCancel)
+	callbackRouter.Register(translate.CallbackWordRemove, translateHandler.HandleWordRemove)
 	callbackRouter.Register(translate.CallbackWordAlreadySaved, translateHandler.HandleAlreadySaved)
 	callbackRouter.Register(user_prefs.CallbackLang, langHandler.HandleLang)
 

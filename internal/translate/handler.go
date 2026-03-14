@@ -18,9 +18,7 @@ const (
 	maxMsgLength     = 4096
 	truncationSuffix = "..."
 
-	CallbackWordSave         = bot.CallbackPrefixWord + "SAVE_"
-	CallbackWordConfirm      = bot.CallbackPrefixConfirm + "SAVE_"
-	CallbackWordCancel       = bot.CallbackPrefixCancel + "SAVE"
+	CallbackWordRemove       = bot.CallbackPrefixWord + "REMOVE_"
 	CallbackWordAlreadySaved = bot.CallbackPrefixWord + "ALREADY_SAVED"
 )
 
@@ -28,6 +26,7 @@ type WordSaver interface {
 	Save(ctx context.Context, userID int64, word, partOfSpeech, preposition, translation string) error
 	SaveMeanings(ctx context.Context, userID int64, word string, meanings []Meaning) error
 	GetByWord(ctx context.Context, userID int64, word string) (my_word_list.Entity, error)
+	Delete(ctx context.Context, userID int64, word string) error
 }
 
 type Handler struct {
@@ -47,6 +46,7 @@ func (h *Handler) Command() string { return bot.CmdDefault }
 func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *bot.UserSession) error {
 	text := strings.TrimSpace(update.Message.Text)
 	chatID := update.Message.Chat.ID
+	userID := update.Message.From.ID
 	lang := session.Lang()
 
 	if msgKey := validateWord(text); msgKey != "" {
@@ -68,48 +68,36 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 		result.Meanings = h.dictClient.Meanings(ctx, text)
 	}
 
-	_, alreadySaved := h.wordRepo.GetByWord(ctx, update.Message.From.ID, text)
+	// Check if word already exists
+	_, alreadyExists := h.wordRepo.GetByWord(ctx, userID, text)
 
-	session.SetPendingWord(text, result.Meanings)
+	// Auto-save word if it's new
+	if alreadyExists != nil && len(result.Meanings) > 0 {
+		if err := h.wordRepo.SaveMeanings(ctx, userID, text, result.Meanings); err != nil {
+			h.log.Warn(ctx, "word.autosave_failed", logger.Field{Key: "user_id", Value: userID}, logger.Field{Key: "word", Value: text})
+		} else {
+			h.log.Info(ctx, "word.autosaved", logger.Field{Key: "user_id", Value: userID}, logger.Field{Key: "word", Value: text})
+		}
+	}
 
-	msg := bot.NewMessageWithKeyboard(chatID, h.buildText(text, result, lang), h.buildActionKeyboard(text, lang, alreadySaved == nil))
+	msg := bot.NewMessageWithKeyboard(chatID, h.buildText(text, result, lang, alreadyExists == nil), h.buildActionKeyboard(text, lang, alreadyExists == nil))
 	_, sendErr := b.Send(msg)
 	return sendErr
 }
 
-func (h *Handler) HandleWordSave(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, word string, session *bot.UserSession) error {
+func (h *Handler) HandleWordRemove(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, word string, session *bot.UserSession) error {
 	lang := session.Lang()
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgConfirm), CallbackWordConfirm+word),
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgCancel), CallbackWordCancel),
-		),
-	)
-	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgConfirmSave, word), &keyboard)
-	_, err := b.Send(msg)
-	return err
-}
-
-func (h *Handler) HandleWordConfirm(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, word string, session *bot.UserSession) error {
-	lang := session.Lang()
-	meanings := session.PendingWord(word)
-	if err := h.wordRepo.SaveMeanings(ctx, query.From.ID, word, meanings); err != nil {
-		h.log.Warn(ctx, "word.save_failed", logger.Field{Key: "user_id", Value: query.From.ID})
+	if err := h.wordRepo.Delete(ctx, query.From.ID, word); err != nil {
+		h.log.Warn(ctx, "word.remove_failed", logger.Field{Key: "user_id", Value: query.From.ID}, logger.Field{Key: "word", Value: word})
+	} else {
+		h.log.Info(ctx, "word.removed", logger.Field{Key: "user_id", Value: query.From.ID}, logger.Field{Key: "word", Value: word})
 	}
-	h.log.Info(ctx, "word.saved", logger.Field{Key: "user_id", Value: query.From.ID})
-	msg := bot.NewEditMessage(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgWordSaved, word))
+	msg := bot.NewEditMessage(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgWordRemoved, word))
 	_, err := b.Send(msg)
 	return err
 }
 
-func (h *Handler) HandleWordCancel(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
-	lang := session.Lang()
-	msg := bot.NewEditMessage(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgCancelled))
-	_, err := b.Send(msg)
-	return err
-}
-
-func (h *Handler) buildText(word string, t Translation, lang i18n.Lang) string {
+func (h *Handler) buildText(word string, t Translation, lang i18n.Lang, autoSaved bool) string {
 	var b strings.Builder
 	b.WriteString(h.msgSource.Get(lang, i18n.MsgTranslationHeader, word) + "\n\n")
 	if len(t.Meanings) > 0 {
@@ -136,6 +124,12 @@ func (h *Handler) buildText(word string, t Translation, lang i18n.Lang) string {
 			b.WriteString(h.msgSource.Get(lang, i18n.MsgTranslationTerm, term))
 		}
 	}
+	
+	// Add auto-save status
+	if autoSaved {
+		b.WriteString("\n\n" + h.msgSource.Get(lang, i18n.MsgWordAutoSaved))
+	}
+	
 	text := b.String()
 	if len(text) > maxMsgLength {
 		text = text[:maxMsgLength-len(truncationSuffix)] + truncationSuffix
@@ -149,13 +143,15 @@ func (h *Handler) HandleAlreadySaved(ctx context.Context, b *tgbotapi.BotAPI, qu
 	return err
 }
 
-func (h *Handler) buildActionKeyboard(word string, lang i18n.Lang, alreadySaved bool) *tgbotapi.InlineKeyboardMarkup {
-	var btn tgbotapi.InlineKeyboardButton
-	if alreadySaved {
-		btn = tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgAlreadySaved), CallbackWordAlreadySaved)
-	} else {
-		btn = tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgSaveWord), CallbackWordSave+word)
+func (h *Handler) buildActionKeyboard(word string, lang i18n.Lang, autoSaved bool) *tgbotapi.InlineKeyboardMarkup {
+	if !autoSaved {
+		// Word already existed - show "Already in your list"
+		btn := tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgAlreadySaved), CallbackWordAlreadySaved)
+		kb := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(btn))
+		return &kb
 	}
-	kb := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(btn))
+	// Word was auto-saved - show Remove button
+	removeBtn := tgbotapi.NewInlineKeyboardButtonData("🗑️ "+h.msgSource.Get(lang, i18n.MsgRemoveWord), CallbackWordRemove+word)
+	kb := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(removeBtn))
 	return &kb
 }
