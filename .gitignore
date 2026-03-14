@@ -58,3 +58,13 @@ temp/
 
 # Amazon Q
 /.amazonq/
+
+# IDE
+/.idea/
+
+# Internal docs
+REFACTORING_SUMMARY.md
+MODERNIZATION.md
+CHANGELOG.md
+SECURITY.md
+docker-compose.prod.yml
