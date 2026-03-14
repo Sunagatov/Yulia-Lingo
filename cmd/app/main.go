@@ -84,6 +84,7 @@ func run() error {
 	registry.Register(bot.NewMenuHandler(msgSource))
 	registry.Register(irrVerbsHandler)
 	registry.Register(wordListHandler)
+	registry.Register(bot.NewFuncHandler("/import", wordListHandler.HandleImportCommand))
 	registry.Register(translateHandler)
 	registry.Register(langHandler)
 	for _, lang := range i18n.SupportedLangs {
@@ -94,6 +95,8 @@ func run() error {
 	}
 
 	callbackRouter := bot.NewCallbackRouter(log)
+	menuCallbackHandler := bot.NewMenuCallbackHandler(registry)
+	callbackRouter.Register(bot.CallbackMenuCmd, menuCallbackHandler.Handle)
 	callbackRouter.Register(irregular_verbs.CallbackVerbLetter, irrVerbsHandler.HandleVerbLetter)
 	callbackRouter.Register(irregular_verbs.CallbackVerbPage, irrVerbsHandler.HandleVerbPage)
 	callbackRouter.Register(irregular_verbs.CallbackVerbBack, irrVerbsHandler.HandleVerbBack)
@@ -110,7 +113,10 @@ func run() error {
 	callbackRouter.Register(my_word_list.CallbackWordFilterD, wordListHandler.HandleWordFilterDays)
 	callbackRouter.Register(my_word_list.CallbackWordFilterP, wordListHandler.HandleWordFilterPartOfSpeech)
 	callbackRouter.Register(my_word_list.CallbackWordFilterL, wordListHandler.HandleWordFilterLetter)
+	callbackRouter.Register(my_word_list.CallbackWordNoop, wordListHandler.HandleWordNoop)
 	callbackRouter.Register(my_word_list.CallbackWordClear, wordListHandler.HandleWordClear)
+	callbackRouter.Register(my_word_list.CallbackImportSave, wordListHandler.HandleImportSave)
+	callbackRouter.Register(my_word_list.CallbackImportCancel, wordListHandler.HandleImportCancel)
 	callbackRouter.Register(translate.CallbackWordSave, translateHandler.HandleWordSave)
 	callbackRouter.Register(translate.CallbackWordConfirm, translateHandler.HandleWordConfirm)
 	callbackRouter.Register(translate.CallbackWordCancel, translateHandler.HandleWordCancel)
@@ -118,6 +124,9 @@ func run() error {
 	callbackRouter.Register(user_prefs.CallbackLang, langHandler.HandleLang)
 
 	sessions := bot.NewSessionManager(prefsRepo)
+
+	scheduler := my_word_list.NewScheduler(wordListRepo, prefsRepo, msgSource, tg, log)
+	go scheduler.Run(ctx)
 
 	registerBotCommands(ctx, tg, msgSource, log)
 
@@ -190,6 +199,7 @@ func registerBotCommands(ctx context.Context, tg *tgbotapi.BotAPI, msgSource *i1
 			{Command: bot.CmdMenu, Description: msgSource.Get(lang, i18n.MsgCmdMenu)},
 			{Command: bot.CmdCancel, Description: msgSource.Get(lang, i18n.MsgCmdCancel)},
 			{Command: bot.CmdLang, Description: msgSource.Get(lang, i18n.MsgCmdLang)},
+			{Command: "import", Description: msgSource.Get(lang, i18n.MsgCmdImport)},
 		}
 		cfg := tgbotapi.NewSetMyCommandsWithScopeAndLanguage(tgbotapi.NewBotCommandScopeDefault(), string(lang), cmds...)
 		if _, err := tg.Request(cfg); err != nil {

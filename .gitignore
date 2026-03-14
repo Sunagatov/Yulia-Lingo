@@ -5,6 +5,7 @@
 *.so
 *.dylib
 yulia-lingo
+main
 
 # Test files
 *.test
@@ -54,4 +55,6 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
-/go.sum
+
+# Amazon Q
+/.amazonq/

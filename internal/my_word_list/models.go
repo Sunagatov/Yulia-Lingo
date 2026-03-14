@@ -13,6 +13,7 @@ type Entity struct {
 	ID           int
 	Word         string
 	PartOfSpeech string
+	Preposition  string
 	Translation  string
 	Confidence   int
 }

@@ -31,11 +31,15 @@ func (h *StartHandler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tg
 	}
 
 	keyboard := BuildMainKeyboard(h.msgSource, lang)
-
-	text := h.msgSource.Get(lang, i18n.MsgWelcome, name) + "\n\n" + h.msgSource.Get(lang, i18n.MsgMenu)
-	msg := NewMessageWithKeyboard(update.Message.Chat.ID, text, keyboard)
-	if _, err := b.Send(msg); err != nil {
+	inlineKb := BuildMenuKeyboard(h.msgSource, lang)
+	welcomeMsg := NewMessageWithKeyboard(update.Message.Chat.ID,
+		h.msgSource.Get(lang, i18n.MsgWelcome, name), keyboard)
+	if _, err := b.Send(welcomeMsg); err != nil {
 		return fmt.Errorf("send start: %w", err)
+	}
+	menuMsg := NewMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgMenu), &inlineKb)
+	if _, err := b.Send(menuMsg); err != nil {
+		return fmt.Errorf("send menu: %w", err)
 	}
 	session.ClearState()
 	return nil

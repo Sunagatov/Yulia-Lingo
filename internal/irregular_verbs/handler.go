@@ -34,7 +34,7 @@ func (h *Handler) Command() string { return i18n.MsgLabelIrregularVerbs }
 
 func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *bot.UserSession) error {
 	lang := session.Lang()
-	keyboard := h.buildLetterKeyboard(session.ActiveLetter())
+	keyboard := h.buildLetterKeyboard(ctx, session.ActiveLetter())
 	msg := bot.NewMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgChooseLetter), &keyboard)
 	_, err := b.Send(msg)
 	return err
@@ -58,7 +58,7 @@ func (h *Handler) HandleVerbPage(ctx context.Context, b *tgbotapi.BotAPI, query 
 
 func (h *Handler) HandleVerbBack(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
 	lang := session.Lang()
-	keyboard := h.buildLetterKeyboard(session.ActiveLetter())
+	keyboard := h.buildLetterKeyboard(ctx, session.ActiveLetter())
 	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, h.msgSource.Get(lang, i18n.MsgChooseLetter), &keyboard)
 	_, err := b.Send(msg)
 	return err
@@ -74,43 +74,48 @@ func (h *Handler) showPage(ctx context.Context, b *tgbotapi.BotAPI, query *tgbot
 	if err != nil {
 		return fmt.Errorf("failed to get count: %w", err)
 	}
-	text := h.buildText(letter, verbs, page, total, lang)
-	keyboard := h.buildNavKeyboard(letter, page, total, lang)
+	totalPages := (total + verbsPerPage - 1) / verbsPerPage
+	text := h.buildText(letter, verbs, page, totalPages, lang)
+	keyboard := h.buildNavKeyboard(letter, page, totalPages, lang)
 	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &keyboard)
 	_, err = b.Send(msg)
 	return err
 }
 
-func (h *Handler) buildText(letter string, verbs []Entity, page, total int, lang i18n.Lang) string {
+func (h *Handler) buildText(letter string, verbs []Entity, page, totalPages int, lang i18n.Lang) string {
 	var b strings.Builder
 	b.WriteString(h.msgSource.Get(lang, i18n.MsgIrregularVerbsTitle, letter) + "\n\n")
 	for i, v := range verbs {
-		line := h.msgSource.Get(lang, i18n.MsgVerbRow, page*verbsPerPage+i+1, v.Verb, v.Past, v.PastParticiple)
-		if v.Original != "" {
-			line += h.msgSource.Get(lang, i18n.MsgVerbRowTranslation, v.Original)
-		}
 		if i > 0 {
-			b.WriteByte('\n')
+			b.WriteString("\n\n")
 		}
-		b.WriteString(line)
+		b.WriteString(h.msgSource.Get(lang, i18n.MsgVerbRow, v.Verb, v.Past, v.PastParticiple))
+		if v.Original != "" {
+			b.WriteString(h.msgSource.Get(lang, i18n.MsgVerbRowTranslation, v.Original))
+		}
 	}
-	totalPages := (total + verbsPerPage - 1) / verbsPerPage
 	b.WriteString("\n" + h.msgSource.Get(lang, i18n.MsgPageFooter,
 		h.msgSource.Get(lang, i18n.MsgPageInfo, page+1, totalPages),
-		h.msgSource.Get(lang, i18n.MsgTotalVerbs, total),
+		fmt.Sprintf("%s", letter),
 	))
 	return b.String()
 }
 
-func (h *Handler) buildLetterKeyboard(activeLetter string) tgbotapi.InlineKeyboardMarkup {
+func (h *Handler) buildLetterKeyboard(ctx context.Context, activeLetter string) tgbotapi.InlineKeyboardMarkup {
+	counts, _ := h.repo.GetLetterCounts(ctx)
 	var rows [][]tgbotapi.InlineKeyboardButton
 	var row []tgbotapi.InlineKeyboardButton
 	for _, l := range letters {
-		label := string(l)
-		if label == activeLetter {
+		ls := string(l)
+		count, ok := counts[ls]
+		if !ok {
+			continue
+		}
+		label := fmt.Sprintf("%s (%d)", ls, count)
+		if ls == activeLetter {
 			label = bot.ActiveMark + label
 		}
-		row = append(row, tgbotapi.NewInlineKeyboardButtonData(label, CallbackVerbLetter+string(l)))
+		row = append(row, tgbotapi.NewInlineKeyboardButtonData(label, CallbackVerbLetter+ls))
 		if len(row) == buttonsPerRow {
 			rows = append(rows, row)
 			row = nil
@@ -122,18 +127,17 @@ func (h *Handler) buildLetterKeyboard(activeLetter string) tgbotapi.InlineKeyboa
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
 }
 
-func (h *Handler) buildNavKeyboard(letter string, page, total int, lang i18n.Lang) tgbotapi.InlineKeyboardMarkup {
-	totalPages := (total + verbsPerPage - 1) / verbsPerPage
+func (h *Handler) buildNavKeyboard(letter string, page, totalPages int, lang i18n.Lang) tgbotapi.InlineKeyboardMarkup {
 	var nav []tgbotapi.InlineKeyboardButton
 	if page > 0 {
 		nav = append(nav, tgbotapi.NewInlineKeyboardButtonData(
-			h.msgSource.Get(lang, i18n.MsgPrevious),
+			fmt.Sprintf("◀ %s (%d/%d)", letter, page, totalPages),
 			fmt.Sprintf("%s%s_%d", CallbackVerbPage, letter, page-1),
 		))
 	}
 	if page < totalPages-1 {
 		nav = append(nav, tgbotapi.NewInlineKeyboardButtonData(
-			h.msgSource.Get(lang, i18n.MsgNext),
+			fmt.Sprintf("%s (%d/%d) ▶", letter, page+2, totalPages),
 			fmt.Sprintf("%s%s_%d", CallbackVerbPage, letter, page+1),
 		))
 	}

@@ -27,6 +27,7 @@ const (
 	CallbackWordFilterL = bot.CallbackPrefixWord + "FL_"
 	CallbackWordFilterD = bot.CallbackPrefixWord + "FD_"
 	CallbackWordClear   = bot.CallbackPrefixWord + "CLEAR"
+	CallbackWordNoop    = bot.CallbackPrefixWord + "NOOP"
 )
 
 var sortCycle = []string{"", "confidence", "confidence_desc", "alpha", "alpha_desc", "newest", "oldest"}
@@ -53,12 +54,15 @@ func (h *Handler) Command() string { return i18n.MsgLabelMyWordList }
 func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *bot.UserSession) error {
 	userID := update.Message.From.ID
 	chatID := update.Message.Chat.ID
-	if session.State() == bot.StateWaitingForSearch {
+	switch session.State() {
+	case bot.StateWaitingForSearch:
 		f := session.WordListFilter()
 		f.Search = strings.TrimSpace(update.Message.Text)
 		session.SetWordListFilter(f)
 		session.ClearState()
 		return h.showPageMsg(ctx, b, chatID, userID, 0, session)
+	case bot.StateWaitingForImport:
+		return h.HandleImportInput(ctx, b, update, session)
 	}
 	session.SetWordListFilter(bot.WordListFilter{})
 	session.SetWordListPage(0)
@@ -77,8 +81,9 @@ func (h *Handler) HandleWordDetail(ctx context.Context, b *tgbotapi.BotAPI, quer
 	if err != nil {
 		return h.showPage(ctx, b, query, session.WordListPage(), session)
 	}
+	meanings, _ := h.repo.GetMeaningsByWord(ctx, query.From.ID, word)
 	lang := session.Lang()
-	text := h.msgSource.Get(lang, i18n.MsgWordDetail, entity.Word, entity.Translation, entity.PartOfSpeech)
+	text := buildDetailText(h.msgSource, lang, entity, meanings)
 	kb := h.buildDetailKeyboard(lang, entity)
 	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &kb)
 	_, err = b.Send(msg)
@@ -139,16 +144,20 @@ func (h *Handler) HandleWordSort(ctx context.Context, b *tgbotapi.BotAPI, query 
 	return h.showPage(ctx, b, query, session.WordListPage(), session)
 }
 
-// HandleWordFilters opens the filter screen.
 func (h *Handler) HandleWordFilters(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
 	lang := session.Lang()
 	f := session.WordListFilter()
 	parts, _ := h.repo.GetDistinctPartsOfSpeech(ctx, query.From.ID)
 	letters, _ := h.repo.GetDistinctFirstLetters(ctx, query.From.ID)
 	kb := h.buildFiltersKeyboard(lang, f, parts, letters)
-	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID,
-		h.msgSource.Get(lang, i18n.MsgFiltersScreen), &kb)
+	text := h.msgSource.Get(lang, i18n.MsgFiltersScreen) + "\n\n" + buildActiveFiltersLine(h.msgSource, lang, f)
+	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &kb)
 	_, err := b.Send(msg)
+	return err
+}
+
+func (h *Handler) HandleWordNoop(_ context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, _ *bot.UserSession) error {
+	_, err := b.Request(tgbotapi.NewCallback(query.ID, ""))
 	return err
 }
 

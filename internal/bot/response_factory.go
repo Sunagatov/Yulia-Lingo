@@ -23,6 +23,19 @@ func BuildMainKeyboard(msgSource *i18n.MessageSource, lang i18n.Lang) tgbotapi.R
 	return kb
 }
 
+func BuildMenuKeyboard(msgSource *i18n.MessageSource, lang i18n.Lang) tgbotapi.InlineKeyboardMarkup {
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(msgSource.Get(lang, i18n.MsgLabelIrregularVerbs), "MENU_CMD_irregular_verbs"),
+			tgbotapi.NewInlineKeyboardButtonData(msgSource.Get(lang, i18n.MsgLabelMyWordList), "MENU_CMD_my_word_list"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("📥 "+msgSource.Get(lang, i18n.MsgCmdImport), "MENU_CMD_import"),
+			tgbotapi.NewInlineKeyboardButtonData(msgSource.Get(lang, i18n.MsgLabelLang), "MENU_CMD_lang"),
+		),
+	)
+}
+
 func NewMessage(chatID int64, text string) tgbotapi.MessageConfig {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = parseMode

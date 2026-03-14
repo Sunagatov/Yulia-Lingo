@@ -13,7 +13,7 @@ import (
 )
 
 type DictClient interface {
-	PartOfSpeech(ctx context.Context, word string) string
+	Meanings(ctx context.Context, word string) []Meaning
 }
 
 type dictClient struct {
@@ -29,35 +29,53 @@ func NewDictClient(cfg *config.Config, httpClient *http.Client, log logger.Logge
 	return &dictClient{baseURL: cfg.Translate.DictAPIURL, httpClient: httpClient, log: log}
 }
 
-func (c *dictClient) PartOfSpeech(ctx context.Context, word string) string {
+func (c *dictClient) Meanings(ctx context.Context, word string) []Meaning {
 	reqURL := fmt.Sprintf("%s/api/v2/entries/en/%s", c.baseURL, url.PathEscape(word))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
-		return ""
+		return nil
 	}
 	req.Header.Set("User-Agent", "Yulia-Lingo/1.0")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return ""
+		return nil
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return ""
+		return nil
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
-		return ""
+		return nil
 	}
 
 	var entries []struct {
 		Meanings []struct {
 			PartOfSpeech string `json:"partOfSpeech"`
+			Definitions  []struct {
+				Definition string `json:"definition"`
+			} `json:"definitions"`
 		} `json:"meanings"`
 	}
-	if err := json.Unmarshal(body, &entries); err != nil || len(entries) == 0 || len(entries[0].Meanings) == 0 {
-		return ""
+	if err := json.Unmarshal(body, &entries); err != nil || len(entries) == 0 {
+		return nil
 	}
-	return entries[0].Meanings[0].PartOfSpeech
+
+	var meanings []Meaning
+	for _, entry := range entries {
+		for _, m := range entry.Meanings {
+			var terms []string
+			for _, d := range m.Definitions {
+				if d.Definition != "" {
+					terms = append(terms, d.Definition)
+				}
+			}
+			if m.PartOfSpeech != "" {
+				meanings = append(meanings, Meaning{PartOfSpeech: m.PartOfSpeech, Terms: terms})
+			}
+		}
+	}
+	return meanings
 }

@@ -19,6 +19,8 @@ func NewMenuHandler(msgSource *i18n.MessageSource) *MenuHandler {
 func (h *MenuHandler) Command() string { return "/" + CmdMenu }
 
 func (h *MenuHandler) Handle(_ context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *UserSession) error {
-	_, err := b.Send(NewMessage(update.Message.Chat.ID, h.msgSource.Get(session.Lang(), i18n.MsgMenu)))
+	lang := session.Lang()
+	kb := BuildMenuKeyboard(h.msgSource, lang)
+	_, err := b.Send(NewMessageWithKeyboard(update.Message.Chat.ID, h.msgSource.Get(lang, i18n.MsgMenu), &kb))
 	return err
 }

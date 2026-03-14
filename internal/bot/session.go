@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"Yulia-Lingo/internal/domain"
 	"Yulia-Lingo/internal/i18n"
 )
 
@@ -12,6 +13,7 @@ type BotState string
 const (
 	StateIdle             BotState = "IDLE"
 	StateWaitingForSearch BotState = "WAITING_FOR_SEARCH"
+	StateWaitingForImport BotState = "WAITING_FOR_IMPORT"
 )
 
 const (
@@ -34,8 +36,7 @@ type WordListFilter struct {
 }
 
 type pendingWord struct {
-	translation  string
-	partOfSpeech string
+	meanings []domain.Meaning
 }
 
 type UserSession struct {
@@ -44,6 +45,7 @@ type UserSession struct {
 	language       string
 	activeLetter   string
 	pending        map[string]pendingWord
+	pendingImport  []string
 	wordListFilter WordListFilter
 	wordListPage   int
 }
@@ -79,17 +81,28 @@ func (s *UserSession) SetLanguage(lang string) {
 	s.language = lang
 }
 
-func (s *UserSession) SetPendingWord(word, translation, partOfSpeech string) {
+func (s *UserSession) SetPendingImport(words []string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.pending[word] = pendingWord{translation: translation, partOfSpeech: partOfSpeech}
+	s.pendingImport = words
 }
 
-func (s *UserSession) PendingWord(word string) (translation, partOfSpeech string) {
+func (s *UserSession) PendingImport() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	p := s.pending[word]
-	return p.translation, p.partOfSpeech
+	return s.pendingImport
+}
+
+func (s *UserSession) SetPendingWord(word string, meanings []domain.Meaning) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.pending[word] = pendingWord{meanings: meanings}
+}
+
+func (s *UserSession) PendingWord(word string) []domain.Meaning {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pending[word].meanings
 }
 
 func (s *UserSession) SetActiveLetter(letter string) {

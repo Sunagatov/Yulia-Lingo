@@ -1,5 +1,5 @@
 # =============================================================================
-# BUILD STAGE
+# BUILD STAGE — Modern 2026 approach with BuildKit cache mounts
 # =============================================================================
 FROM golang:1.24-alpine AS builder
 
@@ -9,12 +9,20 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
 
+# Copy go.mod and go.sum first for dependency caching
 COPY go.mod go.sum ./
-RUN go mod download && go mod verify
 
+# Download dependencies with BuildKit cache mount
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download && go mod verify
+
+# Copy source code
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build \
+# Build with cached dependencies
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s -X main.version=${VERSION}" \
     -o yulia-lingo ./cmd/app
 

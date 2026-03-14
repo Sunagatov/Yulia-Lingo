@@ -7,6 +7,7 @@ import (
 	"Yulia-Lingo/internal/config"
 	"Yulia-Lingo/internal/logger"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -22,6 +23,8 @@ func Connect(ctx context.Context, cfg *config.Config, log logger.Logger) (*pgxpo
 	}
 	poolConfig.MaxConns = int32(cfg.Database.MaxConns)
 	poolConfig.MinConns = int32(cfg.Database.MinConns)
+	// Use simple protocol to avoid Supabase pooler prepared statement conflicts
+	poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	poolConfig.MaxConnLifetime = cfg.Database.MaxConnLifetime
 	poolConfig.MaxConnIdleTime = cfg.Database.MaxConnIdleTime
 	poolConfig.ConnConfig.ConnectTimeout = cfg.Database.ConnectTimeout

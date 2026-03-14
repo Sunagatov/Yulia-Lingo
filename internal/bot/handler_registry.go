@@ -55,7 +55,7 @@ func (r *HandlerRegistry) Route(ctx context.Context, bot *tgbotapi.BotAPI, updat
 		}
 	}
 	// FSM state routing
-	if session.State() == StateWaitingForSearch {
+	if session.State() == StateWaitingForSearch || session.State() == StateWaitingForImport {
 		if handler, ok := r.commands[i18n.MsgLabelMyWordList]; ok {
 			return handler.Handle(ctx, bot, update, session)
 		}

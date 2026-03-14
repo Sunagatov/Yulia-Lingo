@@ -32,6 +32,7 @@ const (
 type Repository interface {
 	GetTotalCount(ctx context.Context, letter string) (int, error)
 	GetPage(ctx context.Context, offset, limit int, letter string) ([]Entity, error)
+	GetLetterCounts(ctx context.Context) (map[string]int, error)
 	Initialize(ctx context.Context) error
 }
 
@@ -77,6 +78,23 @@ func (r *repository) GetPage(ctx context.Context, offset, limit int, letter stri
 		entities = append(entities, e)
 	}
 	return entities, rows.Err()
+}
+
+func (r *repository) GetLetterCounts(ctx context.Context) (map[string]int, error) {
+	rows, err := r.db.Query(ctx, `SELECT UPPER(LEFT(verb,1)), COUNT(*) FROM irregular_verbs GROUP BY 1 ORDER BY 1`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	counts := make(map[string]int)
+	for rows.Next() {
+		var l string
+		var c int
+		if err := rows.Scan(&l, &c); err == nil {
+			counts[l] = c
+		}
+	}
+	return counts, rows.Err()
 }
 
 func (r *repository) Initialize(ctx context.Context) error {

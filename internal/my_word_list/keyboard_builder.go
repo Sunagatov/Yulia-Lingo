@@ -36,6 +36,9 @@ func (h *Handler) buildKeyboard(lang i18n.Lang, f bot.WordListFilter, words []En
 	// one button per word — tap to open detail
 	for _, w := range words {
 		label := w.Word
+		if w.Preposition != "" {
+			label += " " + w.Preposition
+		}
 		if w.Translation != "" {
 			tr := w.Translation
 			if len([]rune(tr)) > 18 {
@@ -72,10 +75,7 @@ func (h *Handler) buildKeyboard(lang i18n.Lang, f bot.WordListFilter, words []En
 	if f.Search != "" {
 		searchBtn = fmt.Sprintf("🔍 \"%s\"", f.Search)
 	}
-	sortBtn := h.msgSource.Get(lang, i18n.MsgFilterSort)
-	if f.Sort != "" {
-		sortBtn += " ✅"
-	}
+	sortBtn := sortOptionLabel(lang, f.Sort, h.msgSource) + " ↕"
 	filtersBtn := h.msgSource.Get(lang, i18n.MsgFilters)
 	if f.Confidence > 0 || f.PartOfSpeech != "" || f.Letter != "" || f.AddedDays > 0 {
 		filtersBtn += " ✅"
@@ -95,8 +95,12 @@ func (h *Handler) buildKeyboard(lang i18n.Lang, f bot.WordListFilter, words []En
 
 func (h *Handler) buildFiltersKeyboard(lang i18n.Lang, f bot.WordListFilter, parts, letters []string) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
+	noop := func(label string) tgbotapi.InlineKeyboardButton {
+		return tgbotapi.NewInlineKeyboardButtonData(label, CallbackWordNoop)
+	}
 
-	// confidence row
+	// — ⭐ Knowledge level —
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(noop(h.msgSource.Get(lang, i18n.MsgFilterSectionStars))))
 	var confRow []tgbotapi.InlineKeyboardButton
 	for c := MinConfidence; c <= MaxConfidence; c++ {
 		label := fmt.Sprintf("%d★", c)
@@ -107,8 +111,9 @@ func (h *Handler) buildFiltersKeyboard(lang i18n.Lang, f bot.WordListFilter, par
 	}
 	rows = append(rows, confRow)
 
-	// first letter rows
+	// — 🔤 First letter —
 	if len(letters) > 0 {
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(noop(h.msgSource.Get(lang, i18n.MsgFilterSectionLetter))))
 		const lettersPerRow = 8
 		var row []tgbotapi.InlineKeyboardButton
 		for _, l := range letters {
@@ -127,17 +132,25 @@ func (h *Handler) buildFiltersKeyboard(lang i18n.Lang, f bot.WordListFilter, par
 		}
 	}
 
-	// part of speech row
+	// — 📚 Part of speech —
 	if len(parts) > 0 {
-		var posRow []tgbotapi.InlineKeyboardButton
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(noop(h.msgSource.Get(lang, i18n.MsgFilterSectionPOS))))
+		const posPerRow = 3
+		var row []tgbotapi.InlineKeyboardButton
 		for _, p := range parts {
 			label := p
 			if f.PartOfSpeech == p {
 				label = bot.ActiveMark + p
 			}
-			posRow = append(posRow, tgbotapi.NewInlineKeyboardButtonData(label, CallbackWordFilterP+p))
+			row = append(row, tgbotapi.NewInlineKeyboardButtonData(label, CallbackWordFilterP+p))
+			if len(row) == posPerRow {
+				rows = append(rows, row)
+				row = nil
+			}
 		}
-		rows = append(rows, posRow)
+		if len(row) > 0 {
+			rows = append(rows, row)
+		}
 	}
 
 	// action row

@@ -25,7 +25,8 @@ const (
 )
 
 type WordSaver interface {
-	Save(ctx context.Context, userID int64, word, partOfSpeech, translation string) error
+	Save(ctx context.Context, userID int64, word, partOfSpeech, preposition, translation string) error
+	SaveMeanings(ctx context.Context, userID int64, word string, meanings []Meaning) error
 	GetByWord(ctx context.Context, userID int64, word string) (my_word_list.Entity, error)
 }
 
@@ -64,13 +65,12 @@ func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotap
 	}
 
 	if sourceLang == string(i18n.LangEN) {
-		result.PartOfSpeech = h.dictClient.PartOfSpeech(ctx, text)
+		result.Meanings = h.dictClient.Meanings(ctx, text)
 	}
 
 	_, alreadySaved := h.wordRepo.GetByWord(ctx, update.Message.From.ID, text)
 
-	// store word+translation in session for use on confirm
-	session.SetPendingWord(text, result.FirstTranslation(), result.PartOfSpeech)
+	session.SetPendingWord(text, result.Meanings)
 
 	msg := bot.NewMessageWithKeyboard(chatID, h.buildText(text, result, lang), h.buildActionKeyboard(text, lang, alreadySaved == nil))
 	_, sendErr := b.Send(msg)
@@ -92,8 +92,8 @@ func (h *Handler) HandleWordSave(ctx context.Context, b *tgbotapi.BotAPI, query 
 
 func (h *Handler) HandleWordConfirm(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, word string, session *bot.UserSession) error {
 	lang := session.Lang()
-	translation, partOfSpeech := session.PendingWord(word)
-	if err := h.wordRepo.Save(ctx, query.From.ID, word, partOfSpeech, translation); err != nil {
+	meanings := session.PendingWord(word)
+	if err := h.wordRepo.SaveMeanings(ctx, query.From.ID, word, meanings); err != nil {
 		h.log.Warn(ctx, "word.save_failed", logger.Field{Key: "user_id", Value: query.From.ID})
 	}
 	h.log.Info(ctx, "word.saved", logger.Field{Key: "user_id", Value: query.From.ID})
@@ -111,20 +111,30 @@ func (h *Handler) HandleWordCancel(ctx context.Context, b *tgbotapi.BotAPI, quer
 
 func (h *Handler) buildText(word string, t Translation, lang i18n.Lang) string {
 	var b strings.Builder
-	header := h.msgSource.Get(lang, i18n.MsgTranslationHeader, word)
-	if t.PartOfSpeech != "" {
-		header += fmt.Sprintf(" _(%s)_", t.PartOfSpeech)
-	}
-	b.WriteString(header + "\n\n")
-	terms := t.Terms
-	if len(terms) > maxTranslations {
-		terms = terms[:maxTranslations]
-	}
-	for i, term := range terms {
-		if i > 0 {
+	b.WriteString(h.msgSource.Get(lang, i18n.MsgTranslationHeader, word) + "\n\n")
+	if len(t.Meanings) > 0 {
+		for _, m := range t.Meanings {
+			b.WriteString(fmt.Sprintf("_(%s)_\n", m.PartOfSpeech))
+			terms := m.Terms
+			if len(terms) > maxTranslations {
+				terms = terms[:maxTranslations]
+			}
+			for _, term := range terms {
+				b.WriteString(h.msgSource.Get(lang, i18n.MsgTranslationTerm, term) + "\n")
+			}
 			b.WriteByte('\n')
 		}
-		b.WriteString(h.msgSource.Get(lang, i18n.MsgTranslationTerm, term))
+	} else {
+		terms := t.Terms
+		if len(terms) > maxTranslations {
+			terms = terms[:maxTranslations]
+		}
+		for i, term := range terms {
+			if i > 0 {
+				b.WriteByte('\n')
+			}
+			b.WriteString(h.msgSource.Get(lang, i18n.MsgTranslationTerm, term))
+		}
 	}
 	text := b.String()
 	if len(text) > maxMsgLength {
