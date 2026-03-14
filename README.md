@@ -86,12 +86,14 @@ Yulia Lingo is a Telegram bot that helps you learn English interactively. Practi
 
 ## ✨ Features
 
-- 📚 **Irregular verbs** — interactive quiz to practice all three verb forms
-- 📝 **Personal word list** — save, browse, and remove your own vocabulary
-- 🔍 **Translation** — instant word translation with multiple meanings
-- 📄 **Pagination** — smooth browsing through large word sets
-- 🔒 **Secure** — parameterized queries, input sanitization, SSRF protection
-- 🛑 **Graceful shutdown** — clean resource release on SIGTERM
+| Feature | Description | Spec |
+|---|---|---|
+| 📚 **Irregular Verbs** | Interactive quiz to practice all three verb forms | [docs/features/irregular-verbs.md](docs/features/irregular-verbs.md) |
+| 📝 **My Word List** | Save, browse, filter, and rate your personal vocabulary (1,806+ words) | [docs/features/my-word-list.md](docs/features/my-word-list.md) |
+| 🔍 **Translate** | Instant word translation with multiple meanings and one-click save | [docs/features/translate.md](docs/features/translate.md) |
+| 🌐 **Language** | Switch between English and Russian interface | [docs/features/language.md](docs/features/language.md) |
+
+> Each feature has a comprehensive spec covering user stories, functional requirements, bot flows, data models, security, and acceptance criteria.
 
 ---
 

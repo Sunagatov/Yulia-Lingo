@@ -72,7 +72,6 @@ CHANGELOG.md
 DEPLOYMENT_SUMMARY.md
 FEATURES.md
 docker-compose.prod.yml
-/docs/
 
 # Utility scripts
 /cmd/check_dups/
