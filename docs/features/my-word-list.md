@@ -25,23 +25,24 @@ Personal vocabulary manager where users can save, browse, filter, and practice E
 
 ## 3. Functional Requirements
 
-1. `/my_word_list` shows paginated list of user's words (6 per page).
-2. Each word shows: word, part of speech, confidence stars (⭐), translation preview.
-3. Pagination buttons: ⬅️ Previous, ➡️ Next, 🔢 Page X/Y.
-4. Filter buttons: 🔤 By Letter, ⭐ By Stars, 📚 By Part of Speech, 🔄 Reset Filters.
-5. Tapping a word shows detailed view with all meanings and translations.
-6. Detail view has: ⭐ Rate Confidence, 🗑️ Delete Word, ⬅️ Back buttons.
-7. Confidence rating shows 5 buttons (⭐ to ⭐⭐⭐⭐⭐).
-8. Delete requires confirmation: "Delete '{word}'?" with ✅ Yes / ❌ No buttons.
-9. Empty list shows: "📝 Your word list is empty. Use /translate to add words."
-10. Total word count shown in header: "📚 My Word List (X words)".
+1. `/my_word_list` shows paginated list of user's words (8 per page).
+2. Each word is an **inline keyboard button** showing: word, preposition (if any), translation preview.
+3. Pagination buttons: ◀ Prev, Page X/Y (center), Next ▶.
+4. Filter/sort buttons: 🔍 Search, Sort ↕, ⚙️ Filters.
+5. Tapping a word button opens detail view with all meanings and translations.
+6. Detail view shows: word, preposition, confidence stars, meanings grouped by part of speech.
+7. Detail view buttons: ☆1-5 (rate confidence), 🗑 Delete, ⬅️ Back.
+8. Confidence rating: tap any star button (1-5) to set confidence level.
+9. Delete requires confirmation: "🗑 Delete" button, then confirm with "🗑 Delete" or "❌ Cancel".
+10. Empty list shows: "_No words saved yet._ Send any English word to translate and tap 💾 to save it."
+11. Header shows: "Page X/Y · Z words" with active filters displayed.
 
 ---
 
 ## 4. Non-Functional Requirements
 
 - **i18n:** All messages in `en.json` and `ru.json`
-- **Pagination:** 6 words per page
+- **Pagination:** 8 words per page
 - **Database:** PostgreSQL with `words` and `word_meanings` tables
 - **Uniqueness:** `UNIQUE (user_id, word, preposition)` constraint prevents duplicates
 - **Performance:** List query < 200ms, detail query < 100ms
@@ -55,39 +56,38 @@ Personal vocabulary manager where users can save, browse, filter, and practice E
 
 ```
 User sends: /my_word_list
-Bot: "📚 My Word List (25 words)
-Page 1/5
+Bot: "📝 My Word List
+Page 1/4 · 25 words
 
-1. **go** (verb) ⭐⭐⭐
-   идти
+[Button: go after — присматривать]
+[Button: take — брать]
+[Button: run — бежать]
+[Button: see — видеть]
+[Button: get — получать]
+[Button: give — давать]
+[Button: make — делать]
+[Button: know — знать]
 
-2. **take** (verb) ⭐⭐
-   брать
+◀ Prev | Page 1/4 | Next ▶
+🔍 Search | ★ Weakest first ↕
+⚙️ Filters"
 
-[...4 more words...]
+User taps: [go after] button
+Bot: "*go* `after`
+★★★☆☆
 
-⬅️ Previous | ➡️ Next | 🔢 1/5
-🔤 By Letter | ⭐ By Stars | 📚 Part of Speech | 🔄 Reset"
+_(phrasal verb)_ `after`
+• присматривать
+• ухаживать
 
-User taps: "go"
-Bot: "📖 **go** (verb)
+☆1 | ☆2 | ☆3 | ☆4 | ☆5
+🗑 Delete | ⬅️ Back to word list"
 
-**Meanings:**
-• verb: идти, ходить, ехать
-• phrasal verb (with 'after'): присматривать
+User taps: ☆5 button
+Bot: [Updates stars to ★★★★★, shows "★ Confidence updated"]
 
-⭐ Current confidence: ⭐⭐⭐
-
-⭐ Rate | 🗑️ Delete | ⬅️ Back"
-
-User taps: ⭐ (rate button)
-Bot: "⭐ Rate your confidence for **go**:
-
-⭐ (1) | ⭐⭐ (2) | ⭐⭐⭐ (3) | ⭐⭐⭐⭐ (4) | ⭐⭐⭐⭐⭐ (5)"
-
-User taps: ⭐⭐⭐⭐
-Bot: "✅ Confidence updated to ⭐⭐⭐⭐ for **go**"
-[Returns to detail view with updated stars]
+User taps: ⬅️ Back
+Bot: [Returns to word list page 1]
 ```
 
 ### Happy Path - Filter by Letter
@@ -168,7 +168,7 @@ Bot: "🗑️ **go** has been deleted from your word list."
 
 ## 8. Acceptance Criteria
 
-- [ ] Given user has 25 words, then list shows 6 words per page with 5 total pages.
+- [ ] Given user has 25 words, then list shows 8 words per page with 4 total pages.
 - [ ] Given user is on page 1, then ⬅️ Previous button is disabled.
 - [ ] Given user is on last page, then ➡️ Next button is disabled.
 - [ ] Given user taps a word, then detail view shows all meanings and translations.
@@ -239,7 +239,7 @@ Bot: "🗑️ **go** has been deleted from your word list."
 - **No bulk delete** — users must delete words one by one.
 - **No export** — users cannot export their word list to CSV/JSON.
 - **No import** — users cannot bulk import words (except via `/translate`).
-- **Fixed page size** — 6 words per page cannot be changed.
+- **Fixed page size** — 8 words per page cannot be changed.
 - **No word notes** — users cannot add personal notes to words.
 
 ---
