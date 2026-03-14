@@ -62,9 +62,19 @@ temp/
 # IDE
 /.idea/
 
+# GitHub workflows (keep standard files like CODE_OF_CONDUCT, CONTRIBUTING)
+/.github/
+
 # Internal docs
 REFACTORING_SUMMARY.md
 MODERNIZATION.md
 CHANGELOG.md
-SECURITY.md
+DEPLOYMENT_SUMMARY.md
+FEATURES.md
 docker-compose.prod.yml
+/docs/
+
+# Utility scripts
+/cmd/check_dups/
+/cmd/verify_words/
+/scripts/*.py
