@@ -20,7 +20,7 @@ func NewMenuCallbackHandler(registry *HandlerRegistry) *MenuCallbackHandler {
 }
 
 func (h *MenuCallbackHandler) Handle(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, data string, session *UserSession) error {
-	cmd := "/" + strings.TrimPrefix(data, "")
+	cmd := strings.TrimPrefix(data, CallbackMenuCmd)
 	// Build a minimal fake update so existing handlers work unchanged.
 	fakeUpdate := tgbotapi.Update{
 		Message: &tgbotapi.Message{
@@ -29,12 +29,15 @@ func (h *MenuCallbackHandler) Handle(ctx context.Context, b *tgbotapi.BotAPI, qu
 			Text: cmd,
 		},
 	}
-	if handler, ok := h.registry.commands[cmd]; ok {
+	// Try as command first (e.g. "import" -> "/import")
+	if handler, ok := h.registry.commands["/"+cmd]; ok {
+		fakeUpdate.Message.Text = "/" + cmd
 		return handler.Handle(ctx, b, fakeUpdate, session)
 	}
-	// fallback: label-based lookup (e.g. "my_word_list" label key)
-	if handler, ok := h.registry.commands[data]; ok {
-		fakeUpdate.Message.Text = data
+	// Map callback data to message key (e.g. "irregular_verbs" -> "label_irregular_verbs")
+	msgKey := "label_" + cmd
+	if handler, ok := h.registry.commands[msgKey]; ok {
+		fakeUpdate.Message.Text = msgKey
 		return handler.Handle(ctx, b, fakeUpdate, session)
 	}
 	return nil
