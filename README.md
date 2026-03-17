@@ -89,8 +89,10 @@ Yulia Lingo is a Telegram bot that helps you learn English interactively. Practi
 | Feature | Description | Spec |
 |---|---|---|
 | 📖 **Irregular Verbs** | Browsable reference list of 295 verbs organized by letter | [docs/features/irregular-verbs.md](docs/features/irregular-verbs.md) |
-| 📝 **My Word List** | Save, browse, filter, and rate your personal vocabulary (1,806+ words) | [docs/features/my-word-list.md](docs/features/my-word-list.md) |
-| 🔍 **Translate** | Instant word translation with multiple meanings and one-click save | [docs/features/translate.md](docs/features/translate.md) |
+| 📝 **My Word List** | Save, browse, filter, and rate your personal vocabulary | [docs/features/my-word-list.md](docs/features/my-word-list.md) |
+| 🏷️ **Browse Mode** | Explore words by Category, Letter, POS, Confidence, or Date with smart filters | [docs/features/browse-mode-design.md](docs/features/browse-mode-design.md) |
+| 🤖 **AI Categorization** | Auto-categorize words with OpenAI (Azure AI compatible) | - |
+| 🔍 **Translate** | Instant word translation with multiple meanings and auto-save | [docs/features/translate.md](docs/features/translate.md) |
 | 🌐 **Language** | Switch between English and Russian interface | [docs/features/language.md](docs/features/language.md) |
 
 > Each feature has a comprehensive spec covering user stories, functional requirements, bot flows, data models, security, and acceptance criteria.
@@ -139,6 +141,12 @@ internal/
 | `POSTGRESQL_DATABASE_NAME` | ❌ | Defaults to `yulia_lingo` |
 | `LOG_LEVEL` | ❌ | `debug`, `info`, `warn`, `error` |
 | `IRREGULAR_VERBS_FILE_PATH` | ❌ | Path to irregular verbs Excel file |
+| `OPENAI_API_KEY` | ❌ | OpenAI/Azure AI API key for categorization |
+| `OPENAI_API_URL` | ❌ | API endpoint (default: OpenAI, supports Azure AI) |
+| `OPENAI_MODEL` | ❌ | Model name (default: `gpt-4o-mini`) |
+| `OPENAI_MAX_CALLS_PER_USER_DAY` | ❌ | Daily AI limit per user (default: 50) |
+| `OPENAI_MAX_CALLS_PER_USER_HOUR` | ❌ | Hourly AI limit per user (default: 10) |
+| `OPENAI_MAX_CALLS_GLOBAL_DAY` | ❌ | Global daily AI limit (default: 500) |
 
 See `.env` for local defaults and `.env.prod` for the production template.
 

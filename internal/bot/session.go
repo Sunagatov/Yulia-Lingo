@@ -35,6 +35,25 @@ type WordListFilter struct {
 	AddedDays    int    // 0 = all, 7 = last 7 days, 30 = last 30 days
 }
 
+type BrowseMode string
+
+const (
+	BrowseModeNone       BrowseMode = ""
+	BrowseModeCategory   BrowseMode = "category"
+	BrowseModeLetter     BrowseMode = "letter"
+	BrowseModePOS        BrowseMode = "pos"
+	BrowseModeConfidence BrowseMode = "confidence"
+	BrowseModeDate       BrowseMode = "date"
+)
+
+type BrowseState struct {
+	Mode            BrowseMode
+	PrimaryValue    string // e.g., "Travel & Places", "A", "noun", "3", "this_week"
+	SecondaryFilter string // e.g., "verb", "S", "3"
+	SecondaryType   string // "pos", "letter", "confidence"
+	Page            int
+}
+
 type pendingWord struct {
 	meanings []domain.Meaning
 }
@@ -48,6 +67,7 @@ type UserSession struct {
 	pendingImport  []string
 	wordListFilter WordListFilter
 	wordListPage   int
+	browseState    BrowseState
 }
 
 func (s *UserSession) SetState(state BotState) {
@@ -139,6 +159,24 @@ func (s *UserSession) SetWordListPage(p int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.wordListPage = p
+}
+
+func (s *UserSession) BrowseState() BrowseState {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.browseState
+}
+
+func (s *UserSession) SetBrowseState(b BrowseState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.browseState = b
+}
+
+func (s *UserSession) ClearBrowseState() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.browseState = BrowseState{}
 }
 
 // LangLoader loads a user's persisted language preference.

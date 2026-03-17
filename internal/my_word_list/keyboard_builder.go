@@ -24,6 +24,9 @@ func (h *Handler) buildDetailKeyboard(lang i18n.Lang, entity Entity) tgbotapi.In
 	return tgbotapi.NewInlineKeyboardMarkup(
 		starRow,
 		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgChangeCategory), CallbackWordCategory+fmt.Sprintf("%d", entity.ID)),
+		),
+		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgConfirmDelete), CallbackWordDelete+entity.Word),
 			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgBackToList), CallbackWordBack),
 		),

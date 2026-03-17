@@ -93,6 +93,8 @@ type Repository interface {
 	GetAllUserIDs(ctx context.Context) ([]int64, error)
 	GetRandomWords(ctx context.Context, userID int64, limit int) ([]Entity, error)
 	GetByWord(ctx context.Context, userID int64, word string) (Entity, error)
+	GetWordID(ctx context.Context, userID int64, word string) (int, error)
+	GetByIDs(ctx context.Context, ids []int) ([]Entity, error)
 	GetPageFiltered(ctx context.Context, userID int64, f Filter, offset, limit int) ([]Entity, error)
 	GetTotalFiltered(ctx context.Context, userID int64, f Filter) (int, error)
 	GetTotal(ctx context.Context, userID int64) (int, error)
@@ -177,6 +179,36 @@ func (r *repository) GetByWord(ctx context.Context, userID int64, word string) (
 	var e Entity
 	err := r.db.QueryRow(ctx, getByWordQuery, userID, word).Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Preposition, &e.Translation, &e.Confidence)
 	return e, err
+}
+
+func (r *repository) GetWordID(ctx context.Context, userID int64, word string) (int, error) {
+	var id int
+	err := r.db.QueryRow(ctx, getWordIDQuery, userID, word).Scan(&id)
+	return id, err
+}
+
+func (r *repository) GetByIDs(ctx context.Context, ids []int) ([]Entity, error) {
+	if len(ids) == 0 {
+		return []Entity{}, nil
+	}
+	
+	// Build query with placeholders
+	query := `SELECT id, word, part_of_speech, preposition, translation, confidence FROM words WHERE id = ANY($1)`
+	rows, err := r.db.Query(ctx, query, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var entities []Entity
+	for rows.Next() {
+		var e Entity
+		if err := rows.Scan(&e.ID, &e.Word, &e.PartOfSpeech, &e.Preposition, &e.Translation, &e.Confidence); err != nil {
+			return nil, err
+		}
+		entities = append(entities, e)
+	}
+	return entities, rows.Err()
 }
 
 func (r *repository) SetConfidence(ctx context.Context, userID int64, word string, confidence int) error {

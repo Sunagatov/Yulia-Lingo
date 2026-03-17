@@ -15,6 +15,7 @@ type Config struct {
 	Translate TranslateConfig
 	Logging   LoggingConfig
 	App       AppConfig
+	OpenAI    OpenAIConfig
 }
 
 type DatabaseConfig struct {
@@ -56,6 +57,15 @@ type AppConfig struct {
 	I18nDir                string
 }
 
+type OpenAIConfig struct {
+	APIKey              string
+	APIURL              string
+	Model               string
+	MaxCallsPerUserDay  int
+	MaxCallsPerUserHour int
+	MaxCallsGlobalDay   int
+}
+
 func Load() (*Config, error) {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("failed to load .env file: %w", err)
@@ -95,6 +105,14 @@ func Load() (*Config, error) {
 		App: AppConfig{
 			IrregularVerbsFilePath: getEnv("IRREGULAR_VERBS_FILE_PATH", "resource/nepravilnye-glagoly-295.xlsx"),
 			I18nDir:                getEnv("I18N_DIR", "resource/i18n"),
+		},
+		OpenAI: OpenAIConfig{
+			APIKey:              getEnv("OPENAI_API_KEY", ""),
+			APIURL:              getEnv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions"),
+			Model:               getEnv("OPENAI_MODEL", "gpt-4o-mini"),
+			MaxCallsPerUserDay:  getEnvInt("OPENAI_MAX_CALLS_PER_USER_DAY", 50),
+			MaxCallsPerUserHour: getEnvInt("OPENAI_MAX_CALLS_PER_USER_HOUR", 10),
+			MaxCallsGlobalDay:   getEnvInt("OPENAI_MAX_CALLS_GLOBAL_DAY", 500),
 		},
 	}
 

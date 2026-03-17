@@ -15,6 +15,7 @@ import (
 	"Yulia-Lingo/internal/irregular_verbs"
 	"Yulia-Lingo/internal/logger"
 	"Yulia-Lingo/internal/my_word_list"
+	"Yulia-Lingo/internal/openai"
 	"Yulia-Lingo/internal/translate"
 	"Yulia-Lingo/internal/user_prefs"
 
@@ -61,6 +62,17 @@ func run() error {
 	prefsRepo := user_prefs.NewRepository(db)
 	irrVerbsRepo := irregular_verbs.NewRepository(db, cfg.App.IrregularVerbsFilePath, log)
 	wordListRepo := my_word_list.NewRepository(db)
+	categoryRepo := my_word_list.NewCategoryRepository(db)
+
+	// OpenAI setup
+	openaiClient := openai.NewClient(cfg.OpenAI.APIKey, cfg.OpenAI.APIURL, cfg.OpenAI.Model)
+	usageRepo := openai.NewUsageRepository(db)
+	rateLimiter := openai.NewRateLimiter(
+		cfg.OpenAI.MaxCallsPerUserDay,
+		cfg.OpenAI.MaxCallsPerUserHour,
+		cfg.OpenAI.MaxCallsGlobalDay,
+		usageRepo,
+	)
 
 	if err := prefsRepo.Initialize(ctx); err != nil {
 		return fmt.Errorf("init user_preferences: %w", err)
@@ -73,10 +85,19 @@ func run() error {
 	}
 
 	irrVerbsHandler := irregular_verbs.NewHandler(irrVerbsRepo, msgSource)
-	wordListHandler := my_word_list.NewHandler(wordListRepo, msgSource)
+	wordListHandler := my_word_list.NewHandler(wordListRepo, categoryRepo, msgSource)
 	translateAPIClient := translate.NewAPIClient(cfg, log)
 	translateDictClient := translate.NewDictClient(cfg, nil, log)
-	translateHandler := translate.NewHandler(translateAPIClient, translateDictClient, wordListRepo, msgSource, log)
+	translateHandler := translate.NewHandler(
+		translateAPIClient,
+		translateDictClient,
+		wordListRepo,
+		categoryRepo,
+		openaiClient,
+		rateLimiter,
+		msgSource,
+		log,
+	)
 	langHandler := user_prefs.NewHandler(prefsRepo, msgSource, log)
 
 	registry := bot.NewHandlerRegistry(msgSource)
@@ -115,6 +136,30 @@ func run() error {
 	callbackRouter.Register(my_word_list.CallbackWordFilterL, wordListHandler.HandleWordFilterLetter)
 	callbackRouter.Register(my_word_list.CallbackWordNoop, wordListHandler.HandleWordNoop)
 	callbackRouter.Register(my_word_list.CallbackWordClear, wordListHandler.HandleWordClear)
+	callbackRouter.Register(my_word_list.CallbackWordCategory, wordListHandler.HandleWordCategory)
+	callbackRouter.Register(my_word_list.CallbackWordAddCat, wordListHandler.HandleWordAddCategory)
+	callbackRouter.Register(my_word_list.CallbackWordRemoveCat, wordListHandler.HandleWordRemoveCategory)
+	callbackRouter.Register(my_word_list.CallbackWordDoneCat, wordListHandler.HandleWordDoneCategory)
+	callbackRouter.Register(my_word_list.CallbackBrowseMenu, wordListHandler.HandleBrowseMenu)
+	callbackRouter.Register(my_word_list.CallbackBrowseLetter, wordListHandler.HandleBrowseLetter)
+	callbackRouter.Register(my_word_list.CallbackBrowsePOS, wordListHandler.HandleBrowsePOS)
+	callbackRouter.Register(my_word_list.CallbackBrowseCategory, wordListHandler.HandleBrowseCategory)
+	callbackRouter.Register(my_word_list.CallbackBrowseConfidence, wordListHandler.HandleBrowseConfidence)
+	callbackRouter.Register(my_word_list.CallbackBrowseDate, wordListHandler.HandleBrowseDate)
+	callbackRouter.Register(my_word_list.CallbackCategorySelect, wordListHandler.HandleCategorySelect)
+	callbackRouter.Register(my_word_list.CallbackCategoryPage, wordListHandler.HandleCategoryPage)
+	callbackRouter.Register(my_word_list.CallbackCategoryBack, wordListHandler.HandleCategoryBack)
+	callbackRouter.Register(my_word_list.CallbackCategoryFilterPOS, wordListHandler.HandleCategoryFilterPOS)
+	callbackRouter.Register(my_word_list.CallbackCategoryFilterLetter, wordListHandler.HandleCategoryFilterLetter)
+	callbackRouter.Register(my_word_list.CallbackCategoryFilterConf, wordListHandler.HandleCategoryFilterConf)
+	callbackRouter.Register(my_word_list.CallbackCategorySetPOS, wordListHandler.HandleCategorySetPOS)
+	callbackRouter.Register(my_word_list.CallbackCategorySetLetter, wordListHandler.HandleCategorySetLetter)
+	callbackRouter.Register(my_word_list.CallbackCategorySetConf, wordListHandler.HandleCategorySetConf)
+	callbackRouter.Register(my_word_list.CallbackCategoryClearFilter, wordListHandler.HandleCategoryClearFilter)
+	callbackRouter.Register(my_word_list.CallbackLetterSelect, wordListHandler.HandleLetterSelect)
+	callbackRouter.Register(my_word_list.CallbackPOSSelect, wordListHandler.HandlePOSSelect)
+	callbackRouter.Register(my_word_list.CallbackConfSelect, wordListHandler.HandleConfSelect)
+	callbackRouter.Register(my_word_list.CallbackDateSelect, wordListHandler.HandleDateSelect)
 	callbackRouter.Register(my_word_list.CallbackImportSave, wordListHandler.HandleImportSave)
 	callbackRouter.Register(my_word_list.CallbackImportCancel, wordListHandler.HandleImportCancel)
 	callbackRouter.Register(translate.CallbackWordRemove, translateHandler.HandleWordRemove)
