@@ -35,7 +35,8 @@ func NewCategoryBrowseHandler(repo Repository, categoryRepo *CategoryRepository,
 }
 
 func (h *CategoryBrowseHandler) HandleBrowseCategory(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, session *bot.UserSession) error {
-	session.SetBrowseState(bot.BrowseState{Mode: bot.BrowseModeCategory})
+	// Clear browse state to show fresh category list
+	session.SetBrowseState(bot.BrowseState{})
 	return h.showCategoryList(ctx, b, query, session)
 }
 
