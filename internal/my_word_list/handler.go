@@ -3,29 +3,12 @@ package my_word_list
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"Yulia-Lingo/internal/bot"
 	"Yulia-Lingo/internal/i18n"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
-
-const (
-	CallbackWordSearch = bot.CallbackPrefixWord + "SEARCH"
-	CallbackWordSort   = bot.CallbackPrefixWord + "SORT"
-)
-
-var sortCycle = []string{"", "confidence", "confidence_desc", "alpha", "alpha_desc", "newest", "oldest"}
-
-func getNextSort(current string) string {
-	for i, sort := range sortCycle {
-		if sort == current {
-			return sortCycle[(i+1)%len(sortCycle)]
-		}
-	}
-	return sortCycle[0]
-}
 
 // Handler routes callbacks to specialized handlers
 type Handler struct {
@@ -59,15 +42,8 @@ func NewHandler(repo Repository, categoryRepo *CategoryRepository, msgSource *i1
 func (h *Handler) Command() string { return i18n.MsgLabelMyWordList }
 
 func (h *Handler) Handle(ctx context.Context, b *tgbotapi.BotAPI, update tgbotapi.Update, session *bot.UserSession) error {
-	userID := update.Message.From.ID
 	chatID := update.Message.Chat.ID
 	switch session.State() {
-	case bot.StateWaitingForSearch:
-		f := session.WordListFilter()
-		f.Search = strings.TrimSpace(update.Message.Text)
-		session.SetWordListFilter(f)
-		session.ClearState()
-		return h.view.ShowPageMsg(ctx, b, chatID, userID, 0, session)
 	case bot.StateWaitingForImport:
 		return h.HandleImportInput(ctx, b, update, session)
 	}
@@ -80,21 +56,6 @@ func (h *Handler) HandleWordPage(ctx context.Context, b *tgbotapi.BotAPI, query 
 	fmt.Sscanf(data, "%d", &page)
 	session.SetWordListPage(page)
 	return h.view.ShowPage(ctx, b, query, page, session)
-}
-
-func (h *Handler) HandleWordSearch(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
-	session.SetState(bot.StateWaitingForSearch)
-	msg := bot.NewEditMessage(query.Message.Chat.ID, query.Message.MessageID,
-		h.msgSource.Get(session.Lang(), i18n.MsgSearchPrompt))
-	_, err := b.Send(msg)
-	return err
-}
-
-func (h *Handler) HandleWordSort(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
-	f := session.WordListFilter()
-	f.Sort = getNextSort(f.Sort)
-	session.SetWordListFilter(f)
-	return h.view.ShowPage(ctx, b, query, session.WordListPage(), session)
 }
 
 func (h *Handler) HandleWordBack(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
@@ -156,8 +117,8 @@ func (h *Handler) HandleWordFilterDays(ctx context.Context, b *tgbotapi.BotAPI, 
 }
 
 func (h *Handler) HandleWordClear(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, _ string, session *bot.UserSession) error {
-	h.filter.Clear(session)
-	return h.filter.ShowFilters(ctx, b, query, session)
+	session.SetWordListFilter(bot.WordListFilter{})
+	return h.view.ShowPage(ctx, b, query, 0, session)
 }
 
 // Category assignment delegation

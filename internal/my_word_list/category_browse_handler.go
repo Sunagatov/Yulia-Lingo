@@ -182,6 +182,8 @@ func (h *CategoryBrowseHandler) buildCategoryWordsText(lang i18n.Lang, category 
 	var b strings.Builder
 	emoji := GetCategoryEmoji(category)
 	translatedCategory := translateCategory(category, lang)
+	totalPages := max(1, (total+wordsPerPage-1)/wordsPerPage)
+	
 	b.WriteString(fmt.Sprintf("%s %s\n\n", emoji, h.msgSource.Get(lang, i18n.MsgCategoryWordsTitle, translatedCategory, total)))
 	
 	if state.SecondaryFilter != "" {
@@ -192,26 +194,27 @@ func (h *CategoryBrowseHandler) buildCategoryWordsText(lang i18n.Lang, category 
 		b.WriteString(fmt.Sprintf("✅ %s\n\n", h.msgSource.Get(lang, i18n.MsgShowingFiltered, filterDesc)))
 	}
 	
-	for i, w := range words {
-		confStars := buildStars(w.Confidence)
-		b.WriteString(fmt.Sprintf("%d. *%s* %s\n", page*wordsPerPage+i+1, w.Word, confStars))
-		if w.Translation != "" {
-			b.WriteString(fmt.Sprintf("   _%s_\n", w.Translation))
-		}
-	}
+	b.WriteString(h.msgSource.Get(lang, i18n.MsgPageInfo, page+1, totalPages))
+	b.WriteString(" · ")
+	b.WriteString(h.msgSource.Get(lang, i18n.MsgTotalWords, total))
+	b.WriteString("\n")
 	return b.String()
 }
 
 func (h *CategoryBrowseHandler) buildCategoryWordsKeyboard(lang i18n.Lang, category string, words []Entity, page, total int, state bot.BrowseState) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
 	
-	// Filter buttons
+	// Filter buttons - 2 rows for better mobile visibility
 	if state.SecondaryFilter == "" {
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgFilterByType), CallbackCategoryFilterPOS+category),
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgFilterByLetter), CallbackCategoryFilterLetter+category),
-			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgFilterByStars), CallbackCategoryFilterConf+category),
-		))
+		rows = append(rows, 
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgFilterByType), CallbackCategoryFilterPOS+category),
+				tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgFilterByLetter), CallbackCategoryFilterLetter+category),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgFilterByStars), CallbackCategoryFilterConf+category),
+			),
+		)
 	} else {
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgClearFilters), CallbackCategoryClearFilter+category),
@@ -220,14 +223,36 @@ func (h *CategoryBrowseHandler) buildCategoryWordsKeyboard(lang i18n.Lang, categ
 	
 	// Word buttons
 	for _, w := range words {
+		label := w.Word
+		if w.Preposition != "" {
+			label += " " + w.Preposition
+		}
+		if w.Translation != "" {
+			label += " · " + truncateText(w.Translation, 15)
+		}
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(w.Word, CallbackWordDetail+w.Word),
+			tgbotapi.NewInlineKeyboardButtonData(label, CallbackWordDetail+w.Word),
 		))
 	}
 	
-	// Pagination
-	rows = append(rows, buildPaginationRow(h.msgSource, lang, page, total, wordsPerPage, 
-		func(p int) string { return fmt.Sprintf("%s%s_%d", CallbackCategoryPage, category, p) }))
+	// Pagination - only Prev/Next buttons, no page number button
+	totalPages := max(1, (total+wordsPerPage-1)/wordsPerPage)
+	var navRow []tgbotapi.InlineKeyboardButton
+	if page > 0 {
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(
+			h.msgSource.Get(lang, i18n.MsgPrevious),
+			fmt.Sprintf("%s%s_%d", CallbackCategoryPage, category, page-1),
+		))
+	}
+	if page < totalPages-1 {
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(
+			h.msgSource.Get(lang, i18n.MsgNext),
+			fmt.Sprintf("%s%s_%d", CallbackCategoryPage, category, page+1),
+		))
+	}
+	if len(navRow) > 0 {
+		rows = append(rows, navRow)
+	}
 	
 	// Back button
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
@@ -310,4 +335,12 @@ func (h *CategoryBrowseHandler) HandleClearFilter(ctx context.Context, b *tgbota
 	state.Page = 0
 	session.SetBrowseState(state)
 	return h.showCategoryWords(ctx, b, query, category, 0, session)
+}
+
+func truncateText(text string, maxLen int) string {
+	runes := []rune(text)
+	if len(runes) <= maxLen {
+		return text
+	}
+	return string(runes[:maxLen]) + "…"
 }

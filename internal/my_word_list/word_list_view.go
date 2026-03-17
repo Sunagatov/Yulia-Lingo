@@ -55,7 +55,7 @@ func (v *WordListView) ShowPage(ctx context.Context, b *tgbotapi.BotAPI, query *
 	lang, f := session.Lang(), session.WordListFilter()
 	d := v.LoadPage(ctx, query.From.ID, f, page)
 	text := v.buildText(lang, f, d)
-	kb := v.buildKeyboard(lang, f, d)
+	kb := v.buildKeyboard(lang, f, d, session)
 	_, err := b.Send(bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &kb))
 	return err
 }
@@ -64,53 +64,43 @@ func (v *WordListView) ShowPageMsg(ctx context.Context, b *tgbotapi.BotAPI, chat
 	lang, f := session.Lang(), session.WordListFilter()
 	d := v.LoadPage(ctx, userID, f, page)
 	text := v.buildText(lang, f, d)
-	kb := v.buildKeyboard(lang, f, d)
+	kb := v.buildKeyboard(lang, f, d, session)
 	_, err := b.Send(bot.NewMessageWithKeyboard(chatID, text, &kb))
 	return err
 }
 
 func (v *WordListView) buildText(lang i18n.Lang, f bot.WordListFilter, d PageData) string {
 	var b strings.Builder
-	b.WriteString(v.msgSource.Get(lang, i18n.MsgMyWordListTitle) + "\n")
+	b.WriteString(v.msgSource.Get(lang, i18n.MsgMyWordListTitle) + "\n\n")
 	
 	if len(d.Words) == 0 {
-		if f.Search != "" || f.Confidence > 0 || f.PartOfSpeech != "" || f.Letter != "" || f.AddedDays > 0 {
-			b.WriteString("\n" + v.msgSource.Get(lang, i18n.MsgNoResults))
+		if f.Confidence > 0 || f.PartOfSpeech != "" || f.Letter != "" || f.AddedDays > 0 {
+			b.WriteString(v.msgSource.Get(lang, i18n.MsgNoResults))
 		} else {
-			b.WriteString("\n" + v.msgSource.Get(lang, i18n.MsgWordListEmpty))
+			b.WriteString(v.msgSource.Get(lang, i18n.MsgWordListEmpty))
 		}
 		return b.String()
 	}
 	
-	var filters []string
-	if f.Search != "" {
-		filters = append(filters, fmt.Sprintf("🔍 \"%s\"", f.Search))
-	}
-	if f.Letter != "" {
-		filters = append(filters, f.Letter+"…")
-	}
-	if f.Confidence > 0 {
-		filters = append(filters, fmt.Sprintf("%d★", f.Confidence))
-	}
-	if f.PartOfSpeech != "" {
-		filters = append(filters, f.PartOfSpeech)
-	}
-	if f.AddedDays > 0 {
-		filters = append(filters, v.msgSource.Get(lang, i18n.MsgFilterDays, f.AddedDays))
-	}
-	if len(filters) > 0 {
-		b.WriteString("_" + strings.Join(filters, " · ") + "_\n")
-	}
-	
-	b.WriteString(v.msgSource.Get(lang, i18n.MsgPageFooter,
-		v.msgSource.Get(lang, i18n.MsgPageInfo, d.Page+1, d.TotalPages),
-		v.msgSource.Get(lang, i18n.MsgTotalWords, d.Total),
-	))
+	b.WriteString(v.msgSource.Get(lang, i18n.MsgPageInfo, d.Page+1, d.TotalPages))
+	b.WriteString(" · ")
+	b.WriteString(v.msgSource.Get(lang, i18n.MsgTotalWords, d.Total))
+	b.WriteString("\n")
 	return b.String()
 }
 
-func (v *WordListView) buildKeyboard(lang i18n.Lang, f bot.WordListFilter, d PageData) tgbotapi.InlineKeyboardMarkup {
+func (v *WordListView) buildKeyboard(lang i18n.Lang, f bot.WordListFilter, d PageData, session *bot.UserSession) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
+
+	// Active filters + Clear button
+	if v.hasActiveFilters(f) {
+		rows = append(rows, v.buildActiveFiltersRow(lang, f))
+	}
+
+	// Narrow down buttons (max 2 filters total)
+	if v.canAddMoreFilters(f, session) {
+		rows = append(rows, v.buildNarrowDownButtons(lang, session)...)
+	}
 
 	for _, w := range d.Words {
 		label := v.buildWordLabel(w)
@@ -119,7 +109,7 @@ func (v *WordListView) buildKeyboard(lang i18n.Lang, f bot.WordListFilter, d Pag
 		))
 	}
 
-	// Pagination
+	// Pagination - only Prev/Next buttons
 	var nav []tgbotapi.InlineKeyboardButton
 	if d.Page > 0 {
 		nav = append(nav, tgbotapi.NewInlineKeyboardButtonData(
@@ -127,59 +117,108 @@ func (v *WordListView) buildKeyboard(lang i18n.Lang, f bot.WordListFilter, d Pag
 			fmt.Sprintf("%s%d", CallbackWordPage, d.Page-1),
 		))
 	}
-	nav = append(nav, tgbotapi.NewInlineKeyboardButtonData(
-		v.msgSource.Get(lang, i18n.MsgPageInfo, d.Page+1, d.TotalPages),
-		fmt.Sprintf("%s%d", CallbackWordPage, d.Page),
-	))
 	if d.Page < d.TotalPages-1 {
 		nav = append(nav, tgbotapi.NewInlineKeyboardButtonData(
 			v.msgSource.Get(lang, i18n.MsgNext),
 			fmt.Sprintf("%s%d", CallbackWordPage, d.Page+1),
 		))
 	}
-	rows = append(rows, nav)
+	if len(nav) > 0 {
+		rows = append(rows, nav)
+	}
 
-	// Action buttons
-	searchBtn := v.msgSource.Get(lang, i18n.MsgFilterSearch)
-	if f.Search != "" {
-		searchBtn = fmt.Sprintf("🔍 \"%s\"", f.Search)
-	}
-	sortBtn := sortOptionLabel(lang, f.Sort, v.msgSource) + " ↕"
-	filtersBtn := v.msgSource.Get(lang, i18n.MsgFilters)
-	if f.Confidence > 0 || f.PartOfSpeech != "" || f.Letter != "" || f.AddedDays > 0 {
-		filtersBtn += " ✅"
-	}
+	// Back to browse menu button
 	rows = append(rows,
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(searchBtn, CallbackWordSearch),
-			tgbotapi.NewInlineKeyboardButtonData(sortBtn, CallbackWordSort),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(filtersBtn, CallbackWordFilters),
+			tgbotapi.NewInlineKeyboardButtonData(
+				v.msgSource.Get(lang, i18n.MsgBackToBrowseMenu),
+				CallbackBrowseMenu,
+			),
 		),
 	)
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
 }
 
-func sortOptionLabel(lang i18n.Lang, sort string, ms *i18n.MessageSource) string {
-	keys := map[string]string{
-		"":                i18n.MsgSortConfidence,
-		"confidence":      i18n.MsgSortConfidence,
-		"confidence_desc": i18n.MsgSortConfidenceDesc,
-		"alpha":           i18n.MsgSortAlpha,
-		"alpha_desc":      i18n.MsgSortAlphaDesc,
-		"newest":          i18n.MsgSortNewest,
-		"oldest":          i18n.MsgSortOldest,
-	}
-	key, ok := keys[sort]
-	if !ok {
-		key = i18n.MsgSortConfidence
-	}
-	return ms.Get(lang, key)
+func (v *WordListView) hasActiveFilters(f bot.WordListFilter) bool {
+	return f.Letter != "" || f.Confidence > 0 || f.PartOfSpeech != "" || f.AddedDays > 0
 }
 
-const maxTranslationDisplayLength = 18
+func (v *WordListView) buildActiveFiltersRow(lang i18n.Lang, f bot.WordListFilter) []tgbotapi.InlineKeyboardButton {
+	var filters []string
+	if f.Letter != "" {
+		filters = append(filters, f.Letter+"…")
+	}
+	if f.PartOfSpeech != "" {
+		filters = append(filters, f.PartOfSpeech)
+	}
+	if f.Confidence > 0 {
+		filters = append(filters, fmt.Sprintf("%d★", f.Confidence))
+	}
+	if f.AddedDays > 0 {
+		filters = append(filters, v.msgSource.Get(lang, i18n.MsgFilterDays, f.AddedDays))
+	}
+	label := "Active: " + strings.Join(filters, ", ")
+	return tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData(label+" ❌", CallbackWordClear),
+	)
+}
+
+func (v *WordListView) canAddMoreFilters(f bot.WordListFilter, session *bot.UserSession) bool {
+	filterCount := 0
+	if f.Letter != "" {
+		filterCount++
+	}
+	if f.PartOfSpeech != "" {
+		filterCount++
+	}
+	if f.Confidence > 0 {
+		filterCount++
+	}
+	if f.AddedDays > 0 {
+		filterCount++
+	}
+	return filterCount < 2
+}
+
+func (v *WordListView) buildNarrowDownButtons(lang i18n.Lang, session *bot.UserSession) [][]tgbotapi.InlineKeyboardButton {
+	f := session.WordListFilter()
+	browseState := session.BrowseState()
+	var buttons []tgbotapi.InlineKeyboardButton
+
+	// Don't show filter that's already used as primary browse dimension
+	if f.PartOfSpeech == "" && browseState.Mode != bot.BrowseModePOS {
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
+			"📝 Part of Speech",
+			CallbackBrowsePOS,
+		))
+	}
+	if f.Letter == "" && browseState.Mode != bot.BrowseModeLetter {
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
+			"🔤 Letter",
+			CallbackBrowseLetter,
+		))
+	}
+	if f.Confidence == 0 && browseState.Mode != bot.BrowseModeConfidence {
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
+			"⭐ Stars",
+			CallbackBrowseConfidence,
+		))
+	}
+
+	if len(buttons) == 0 {
+		return nil
+	}
+
+	var rows [][]tgbotapi.InlineKeyboardButton
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("💡 Narrow down:", CallbackWordNoop),
+	))
+	rows = append(rows, buttons)
+	return rows
+}
+
+const maxTranslationDisplayLength = 15
 
 func (v *WordListView) buildWordLabel(w Entity) string {
 	label := w.Word
@@ -187,7 +226,7 @@ func (v *WordListView) buildWordLabel(w Entity) string {
 		label += " " + w.Preposition
 	}
 	if w.Translation != "" {
-		label += " — " + v.truncateTranslation(w.Translation)
+		label += " · " + v.truncateTranslation(w.Translation)
 	}
 	return label
 }

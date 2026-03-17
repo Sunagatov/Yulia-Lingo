@@ -127,8 +127,6 @@ func run() error {
 	callbackRouter.Register(my_word_list.CallbackWordDelete, wordListHandler.HandleWordDelete)
 	callbackRouter.Register(my_word_list.CallbackWordConfDel, wordListHandler.HandleWordConfirmDelete)
 	callbackRouter.Register(my_word_list.CallbackWordBack, wordListHandler.HandleWordBack)
-	callbackRouter.Register(my_word_list.CallbackWordSearch, wordListHandler.HandleWordSearch)
-	callbackRouter.Register(my_word_list.CallbackWordSort, wordListHandler.HandleWordSort)
 	callbackRouter.Register(my_word_list.CallbackWordFilters, wordListHandler.HandleWordFilters)
 	callbackRouter.Register(my_word_list.CallbackWordFilterC, wordListHandler.HandleWordFilterConfidence)
 	callbackRouter.Register(my_word_list.CallbackWordFilterD, wordListHandler.HandleWordFilterDays)
