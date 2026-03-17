@@ -138,8 +138,13 @@ func (h *CategoryBrowseHandler) showCategoryWords(ctx context.Context, b *tgbota
 	} else {
 		total, err = h.categoryRepo.GetWordCountByCategory(ctx, query.From.ID, category)
 	}
-	if err != nil || total == 0 {
-		return h.showCategoryList(ctx, b, query, session)
+	if err != nil {
+		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, "Error loading category"))
+		return err
+	}
+	if total == 0 {
+		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, "No words in this category"))
+		return nil
 	}
 	
 	// Get word IDs for this page
@@ -150,13 +155,15 @@ func (h *CategoryBrowseHandler) showCategoryWords(ctx context.Context, b *tgbota
 		wordIDs, err = h.categoryRepo.GetWordsByCategory(ctx, query.From.ID, category, page*wordsPerPage, wordsPerPage)
 	}
 	if err != nil {
-		return h.showCategoryList(ctx, b, query, session)
+		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, "Error loading words"))
+		return err
 	}
 	
 	// Get word entities
 	words, err := h.repo.GetByIDs(ctx, wordIDs)
 	if err != nil {
-		return h.showCategoryList(ctx, b, query, session)
+		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, "Error loading word details"))
+		return err
 	}
 	
 	totalPages := max(1, (total+wordsPerPage-1)/wordsPerPage)
@@ -166,12 +173,6 @@ func (h *CategoryBrowseHandler) showCategoryWords(ctx context.Context, b *tgbota
 	
 	text := h.buildCategoryWordsText(lang, category, words, page, total, state)
 	kb := h.buildCategoryWordsKeyboard(lang, category, words, page, total, state)
-	
-	// Check if message would be identical to avoid Telegram API error
-	if query.Message.Text == text {
-		_, err = b.Request(tgbotapi.NewCallback(query.ID, ""))
-		return err
-	}
 	
 	_, err = b.Send(bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &kb))
 	return err
