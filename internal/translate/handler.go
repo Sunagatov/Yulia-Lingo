@@ -146,7 +146,7 @@ func (h *Handler) sendTranslation(b *tgbotapi.BotAPI, chatID int64, word string,
 
 func (h *Handler) sendDetailView(b *tgbotapi.BotAPI, chatID, userID int64, word string, result Translation, lang i18n.Lang, category, partOfSpeech string) error {
 	entity, _ := h.wordRepo.GetByWord(context.Background(), userID, word)
-	text := h.view.BuildDetailText(word, lang, category, partOfSpeech)
+	text := h.view.BuildDetailText(word, result, lang, category, partOfSpeech)
 	kb := h.keyboard.BuildDetailKeyboard(word, entity.ID, lang)
 	msg := bot.NewMessageWithKeyboard(chatID, text, &kb)
 	_, err := b.Send(msg)

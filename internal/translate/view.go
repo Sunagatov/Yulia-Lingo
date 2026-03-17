@@ -61,10 +61,26 @@ func (v *TranslationView) BuildText(word string, t Translation, lang i18n.Lang, 
 	return text
 }
 
-func (v *TranslationView) BuildDetailText(word string, lang i18n.Lang, category, partOfSpeech string) string {
+func (v *TranslationView) BuildDetailText(word string, result Translation, lang i18n.Lang, category, partOfSpeech string) string {
 	var b strings.Builder
 	b.WriteString(v.msgSource.Get(lang, i18n.MsgTranslationHeader, word) + "\n\n")
 	
+	// Show translations
+	if len(result.Meanings) > 0 {
+		for _, m := range result.Meanings {
+			b.WriteString(fmt.Sprintf("_(%s)_\n", m.PartOfSpeech))
+			terms := m.Terms
+			if len(terms) > maxTranslations {
+				terms = terms[:maxTranslations]
+			}
+			for _, term := range terms {
+				b.WriteString(v.msgSource.Get(lang, i18n.MsgTranslationTerm, term) + "\n")
+			}
+			b.WriteByte('\n')
+		}
+	}
+	
+	// Show AI categorization result
 	translatedCategory := translateCategory(category, lang)
 	translatedPOS := translatePOS(partOfSpeech, lang)
 	b.WriteString(v.msgSource.Get(lang, i18n.MsgWordAutoSavedAI, translatedCategory, translatedPOS))
