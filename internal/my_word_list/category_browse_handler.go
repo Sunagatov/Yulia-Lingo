@@ -78,9 +78,16 @@ func (h *CategoryBrowseHandler) buildCategoryListKeyboard(lang i18n.Lang, counts
 
 func (h *CategoryBrowseHandler) HandleCategorySelect(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, category string, session *bot.UserSession) error {
 	state := session.BrowseState()
+	// If already viewing this category, just answer callback
+	if state.Mode == bot.BrowseModeCategory && state.PrimaryValue == category && state.SecondaryFilter == "" {
+		_, err := b.Request(tgbotapi.NewCallback(query.ID, ""))
+		return err
+	}
 	state.Mode = bot.BrowseModeCategory
 	state.PrimaryValue = category
 	state.Page = 0
+	state.SecondaryType = ""
+	state.SecondaryFilter = ""
 	session.SetBrowseState(state)
 	return h.showCategoryWords(ctx, b, query, category, 0, session)
 }
