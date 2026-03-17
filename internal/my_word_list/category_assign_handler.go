@@ -41,9 +41,9 @@ func (h *CategoryAssignHandler) HandleShowCategories(ctx context.Context, b *tgb
 		for _, cat := range categories {
 			translatedCats = append(translatedCats, translateCategory(cat, lang))
 		}
-		text += "Current: " + strings.Join(translatedCats, ", ") + "\n\n"
+		text += h.msgSource.Get(lang, i18n.MsgCurrent) + ": " + strings.Join(translatedCats, ", ") + "\n\n"
 	}
-	text += "Choose categories:"
+	text += h.msgSource.Get(lang, i18n.MsgChooseCategories)
 	
 	kb := h.buildCategoryKeyboard(lang, wordID, categories, userCategories)
 	msg := bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &kb)

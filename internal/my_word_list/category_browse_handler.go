@@ -44,7 +44,7 @@ func (h *CategoryBrowseHandler) showCategoryList(ctx context.Context, b *tgbotap
 	lang := session.Lang()
 	counts, err := h.categoryRepo.GetCategoriesWithCounts(ctx, query.From.ID)
 	if err != nil || len(counts) == 0 {
-		text := h.msgSource.Get(lang, i18n.MsgWordListEmpty) + "\n\n" + "Translate words to build your list!"
+		text := h.msgSource.Get(lang, i18n.MsgWordListEmpty) + "\n\n" + h.msgSource.Get(lang, i18n.MsgTranslateToBuild)
 		kb := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData(h.msgSource.Get(lang, i18n.MsgBackToBrowseMenu), CallbackBrowseMenu),
@@ -139,11 +139,11 @@ func (h *CategoryBrowseHandler) showCategoryWords(ctx context.Context, b *tgbota
 		total, err = h.categoryRepo.GetWordCountByCategory(ctx, query.From.ID, category)
 	}
 	if err != nil {
-		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, "Error loading category"))
+		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, h.msgSource.Get(lang, i18n.MsgErrorLoadingCategory)))
 		return err
 	}
 	if total == 0 {
-		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, "No words in this category"))
+		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, h.msgSource.Get(lang, i18n.MsgNoWordsInCategory)))
 		return nil
 	}
 	
@@ -155,14 +155,14 @@ func (h *CategoryBrowseHandler) showCategoryWords(ctx context.Context, b *tgbota
 		wordIDs, err = h.categoryRepo.GetWordsByCategory(ctx, query.From.ID, category, page*wordsPerPage, wordsPerPage)
 	}
 	if err != nil {
-		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, "Error loading words"))
+		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, h.msgSource.Get(lang, i18n.MsgErrorLoadingWords)))
 		return err
 	}
 	
 	// Get word entities
 	words, err := h.repo.GetByIDs(ctx, wordIDs)
 	if err != nil {
-		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, "Error loading word details"))
+		_, _ = b.Request(tgbotapi.NewCallbackWithAlert(query.ID, h.msgSource.Get(lang, i18n.MsgErrorLoadingDetails)))
 		return err
 	}
 	

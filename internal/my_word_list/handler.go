@@ -22,6 +22,7 @@ type Handler struct {
 	browseSelector     *BrowseSelector
 	categoryBrowse     *CategoryBrowseHandler
 	categoryAssign     *CategoryAssignHandler
+	posAssign          *POSAssignHandler
 }
 
 func NewHandler(repo Repository, categoryRepo *CategoryRepository, msgSource *i18n.MessageSource) *Handler {
@@ -36,6 +37,7 @@ func NewHandler(repo Repository, categoryRepo *CategoryRepository, msgSource *i1
 		browseSelector:     NewBrowseSelector(),
 		categoryBrowse:     NewCategoryBrowseHandler(repo, categoryRepo, msgSource),
 		categoryAssign:     NewCategoryAssignHandler(categoryRepo, msgSource),
+		posAssign:          NewPOSAssignHandler(repo, msgSource),
 	}
 }
 
@@ -227,4 +229,13 @@ func (h *Handler) HandleDateSelect(ctx context.Context, b *tgbotapi.BotAPI, quer
 	f := h.browseSelector.HandleDateSelect(period, session)
 	session.SetWordListFilter(f)
 	return h.view.ShowPage(ctx, b, query, 0, session)
+}
+
+// POS assignment delegation
+func (h *Handler) HandleWordPOS(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, data string, session *bot.UserSession) error {
+	return h.posAssign.HandleShowPOS(ctx, b, query, data, session)
+}
+
+func (h *Handler) HandleWordSetPOS(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, data string, session *bot.UserSession) error {
+	return h.posAssign.HandleSetPOS(ctx, b, query, data, session)
 }

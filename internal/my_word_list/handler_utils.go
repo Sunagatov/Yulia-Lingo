@@ -31,7 +31,7 @@ func buildDetailText(ms *i18n.MessageSource, lang i18n.Lang, entity Entity, mean
 
 	if len(meanings) == 0 {
 		if entity.PartOfSpeech != "" && entity.PartOfSpeech != "word" {
-			b.WriteString(fmt.Sprintf("_(%s)_\n", entity.PartOfSpeech))
+			b.WriteString(fmt.Sprintf("_(%s)_\n", translatePOS(entity.PartOfSpeech, lang)))
 		}
 		if entity.Translation != "" {
 			b.WriteString("• " + entity.Translation)
@@ -40,7 +40,7 @@ func buildDetailText(ms *i18n.MessageSource, lang i18n.Lang, entity Entity, mean
 	}
 
 	for _, m := range meanings {
-		posLine := fmt.Sprintf("_(%s)_", m.PartOfSpeech)
+		posLine := fmt.Sprintf("_(%s)_", translatePOS(m.PartOfSpeech, lang))
 		if m.Preposition != "" && m.Preposition != entity.Preposition {
 			posLine += fmt.Sprintf(" `%s`", m.Preposition)
 		}

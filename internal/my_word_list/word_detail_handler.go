@@ -90,11 +90,14 @@ func (h *WordDetailHandler) buildDetailKeyboard(lang i18n.Lang, entity Entity) t
 	}
 	rows = append(rows, ratingRow)
 	
-	// Category button
+	// Category and POS buttons
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(
 			h.msgSource.Get(lang, i18n.MsgChangeCategory),
 			CallbackWordCategory+fmt.Sprintf("%d", entity.ID)),
+		tgbotapi.NewInlineKeyboardButtonData(
+			h.msgSource.Get(lang, i18n.MsgChangePOS),
+			CallbackWordPOS+fmt.Sprintf("%d", entity.ID)),
 	))
 	
 	// Delete and Back buttons

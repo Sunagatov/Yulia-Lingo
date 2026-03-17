@@ -113,9 +113,9 @@
   "category_words_title": "📚 %s (%d)",
   "back_to_categories": "⬅️ Back to Categories",
   "back_to_browse_menu": "⬅️ Back to Browse Menu",
-  "filter_by_type": "📝 Filter by Type",
+  "filter_by_type": "📝 Filter by Part of Speech",
   "filter_by_letter": "🔤 Filter by Letter",
-  "filter_by_stars": "⭐ Filter by Stars",
+  "filter_by_stars": "⭐ Filter by Knowledge",
   "showing_filtered": "Showing: %s",
   "clear_filters": "❌ Clear Filters",
   "letter_list_title": "🔤 Choose a letter:",
@@ -125,5 +125,15 @@
   "date_today": "Today",
   "date_this_week": "This Week",
   "date_this_month": "This Month",
-  "date_older": "Older"
+  "date_older": "Older",
+  "active_filters": "Active",
+  "current": "Current",
+  "choose_categories": "Choose categories:",
+  "choose_pos": "Choose part of speech:",
+  "narrow_down": "Narrow down:",
+  "translate_to_build": "Translate words to build your list!",
+  "error_loading_category": "Error loading category",
+  "no_words_in_category": "No words in this category",
+  "error_loading_words": "Error loading words",
+  "error_loading_details": "Error loading word details"
 }

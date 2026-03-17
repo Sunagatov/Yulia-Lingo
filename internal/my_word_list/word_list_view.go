@@ -158,7 +158,7 @@ func (v *WordListView) buildActiveFiltersRow(lang i18n.Lang, f bot.WordListFilte
 	if f.AddedDays > 0 {
 		filters = append(filters, v.msgSource.Get(lang, i18n.MsgFilterDays, f.AddedDays))
 	}
-	label := "Active: " + strings.Join(filters, ", ")
+	label := v.msgSource.Get(lang, i18n.MsgActiveFilters) + ": " + strings.Join(filters, ", ")
 	return tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData(label+" ❌", CallbackWordClear),
 	)
@@ -189,19 +189,19 @@ func (v *WordListView) buildNarrowDownButtons(lang i18n.Lang, session *bot.UserS
 	// Don't show filter that's already used as primary browse dimension
 	if f.PartOfSpeech == "" && browseState.Mode != bot.BrowseModePOS {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
-			"📝 Part of Speech",
+			v.msgSource.Get(lang, i18n.MsgBrowseByPOS),
 			CallbackBrowsePOS,
 		))
 	}
 	if f.Letter == "" && browseState.Mode != bot.BrowseModeLetter {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
-			"🔤 Letter",
+			v.msgSource.Get(lang, i18n.MsgBrowseByLetter),
 			CallbackBrowseLetter,
 		))
 	}
 	if f.Confidence == 0 && browseState.Mode != bot.BrowseModeConfidence {
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(
-			"⭐ Stars",
+			v.msgSource.Get(lang, i18n.MsgBrowseByConfidence),
 			CallbackBrowseConfidence,
 		))
 	}
@@ -212,7 +212,7 @@ func (v *WordListView) buildNarrowDownButtons(lang i18n.Lang, session *bot.UserS
 
 	var rows [][]tgbotapi.InlineKeyboardButton
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("💡 Narrow down:", CallbackWordNoop),
+		tgbotapi.NewInlineKeyboardButtonData(v.msgSource.Get(lang, i18n.MsgNarrowDown), CallbackWordNoop),
 	))
 	rows = append(rows, buttons)
 	return rows
@@ -221,10 +221,7 @@ func (v *WordListView) buildNarrowDownButtons(lang i18n.Lang, session *bot.UserS
 const maxTranslationDisplayLength = 15
 
 func (v *WordListView) buildWordLabel(w Entity) string {
-	label := w.Word
-	if w.Preposition != "" {
-		label += " " + w.Preposition
-	}
+	label := "💬 " + w.Word
 	if w.Translation != "" {
 		label += " · " + v.truncateTranslation(w.Translation)
 	}

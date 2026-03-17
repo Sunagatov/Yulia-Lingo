@@ -139,6 +139,16 @@ const (
 	MsgDateThisWeek        = "date_this_week"
 	MsgDateThisMonth       = "date_this_month"
 	MsgDateOlder           = "date_older"
+	MsgActiveFilters       = "active_filters"
+	MsgCurrent             = "current"
+	MsgChooseCategories    = "choose_categories"
+	MsgChoosePOS           = "choose_pos"
+	MsgNarrowDown          = "narrow_down"
+	MsgTranslateToBuild    = "translate_to_build"
+	MsgErrorLoadingCategory = "error_loading_category"
+	MsgNoWordsInCategory   = "no_words_in_category"
+	MsgErrorLoadingWords   = "error_loading_words"
+	MsgErrorLoadingDetails = "error_loading_details"
 )
 
 var SupportedLangs = []Lang{LangRU, LangEN}

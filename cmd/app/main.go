@@ -138,6 +138,8 @@ func run() error {
 	callbackRouter.Register(my_word_list.CallbackWordAddCat, wordListHandler.HandleWordAddCategory)
 	callbackRouter.Register(my_word_list.CallbackWordRemoveCat, wordListHandler.HandleWordRemoveCategory)
 	callbackRouter.Register(my_word_list.CallbackWordDoneCat, wordListHandler.HandleWordDoneCategory)
+	callbackRouter.Register(my_word_list.CallbackWordPOS, wordListHandler.HandleWordPOS)
+	callbackRouter.Register(my_word_list.CallbackWordSetPOS, wordListHandler.HandleWordSetPOS)
 	callbackRouter.Register(my_word_list.CallbackBrowseMenu, wordListHandler.HandleBrowseMenu)
 	callbackRouter.Register(my_word_list.CallbackBrowseLetter, wordListHandler.HandleBrowseLetter)
 	callbackRouter.Register(my_word_list.CallbackBrowsePOS, wordListHandler.HandleBrowsePOS)
