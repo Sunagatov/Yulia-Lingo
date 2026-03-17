@@ -79,17 +79,20 @@ func (h *CategoryBrowseHandler) buildCategoryListKeyboard(lang i18n.Lang, counts
 
 func (h *CategoryBrowseHandler) HandleCategorySelect(ctx context.Context, b *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, category string, session *bot.UserSession) error {
 	state := session.BrowseState()
-	// If already viewing this category, just answer callback
-	if state.Mode == bot.BrowseModeCategory && state.PrimaryValue == category && state.SecondaryFilter == "" {
+	// If already viewing this exact category with no filters, just answer callback
+	if state.Mode == bot.BrowseModeCategory && state.PrimaryValue == category && state.SecondaryFilter == "" && state.Page == 0 {
 		_, err := b.Request(tgbotapi.NewCallback(query.ID, ""))
 		return err
 	}
-	state.Mode = bot.BrowseModeCategory
-	state.PrimaryValue = category
-	state.Page = 0
-	state.SecondaryType = ""
-	state.SecondaryFilter = ""
-	session.SetBrowseState(state)
+	// Update state
+	newState := bot.BrowseState{
+		Mode:            bot.BrowseModeCategory,
+		PrimaryValue:    category,
+		Page:            0,
+		SecondaryType:   "",
+		SecondaryFilter: "",
+	}
+	session.SetBrowseState(newState)
 	return h.showCategoryWords(ctx, b, query, category, 0, session)
 }
 
@@ -163,6 +166,13 @@ func (h *CategoryBrowseHandler) showCategoryWords(ctx context.Context, b *tgbota
 	
 	text := h.buildCategoryWordsText(lang, category, words, page, total, state)
 	kb := h.buildCategoryWordsKeyboard(lang, category, words, page, total, state)
+	
+	// Check if message would be identical to avoid Telegram API error
+	if query.Message.Text == text {
+		_, err = b.Request(tgbotapi.NewCallback(query.ID, ""))
+		return err
+	}
+	
 	_, err = b.Send(bot.NewEditMessageWithKeyboard(query.Message.Chat.ID, query.Message.MessageID, text, &kb))
 	return err
 }
