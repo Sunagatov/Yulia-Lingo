@@ -66,7 +66,6 @@
   "no_results": "_No words match your filters._",
   "word_detail": "*%s* — %s\n_%s_",
   "daily_words_header": "📚 *Your %d words for today:*",
-  "daily_words_header": "📚 *Ваши %d слов на сегодня:*",
   "import_prompt": "📥 *Bulk import*\n\nFill in the CSV template and send it back, or just type words one per line (max 50).",
   "import_template_caption": "📄 Fill in the *word* column and send the file back.",
   "import_preview": "📋 *Preview* (%d valid / %d total)\n\n%s",
