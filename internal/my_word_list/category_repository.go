@@ -102,7 +102,7 @@ func (r *CategoryRepository) GetCategoriesWithCounts(ctx context.Context, userID
 
 func (r *CategoryRepository) GetWordsByCategory(ctx context.Context, userID int64, category string, offset, limit int) ([]int, error) {
 	query := `
-		SELECT DISTINCT w.id
+		SELECT w.id
 		FROM words w
 		JOIN word_categories wc ON w.id = wc.word_id
 		WHERE w.user_id = $1 AND wc.category_name = $2
@@ -128,7 +128,7 @@ func (r *CategoryRepository) GetWordsByCategory(ctx context.Context, userID int6
 
 func (r *CategoryRepository) GetWordsByCategoryFiltered(ctx context.Context, userID int64, category, pos, letter string, confidence int, offset, limit int) ([]int, error) {
 	query := `
-		SELECT DISTINCT w.id
+		SELECT w.id
 		FROM words w
 		JOIN word_categories wc ON w.id = wc.word_id
 		WHERE w.user_id = $1 AND wc.category_name = $2
