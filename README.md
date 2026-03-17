@@ -90,7 +90,7 @@ Yulia Lingo is a Telegram bot that helps you learn English interactively. Practi
 |---|---|---|
 | 📖 **Irregular Verbs** | Browsable reference list of 295 verbs organized by letter | [docs/features/irregular-verbs.md](docs/features/irregular-verbs.md) |
 | 📝 **My Word List** | Save, browse, filter, and rate your personal vocabulary | [docs/features/my-word-list.md](docs/features/my-word-list.md) |
-| 🏷️ **Browse Mode** | Explore words by Category, Letter, POS, Confidence, or Date with smart filters | [docs/features/browse-mode-design.md](docs/features/browse-mode-design.md) |
+| 🏷️ **Browse Mode** | Explore words by Category, Letter, POS, Confidence, or Date with smart filters | [docs/features/browse-mode-design.md](.amazonq/browse-mode-design.md) |
 | 🤖 **AI Categorization** | Auto-categorize words with OpenAI (Azure AI compatible) | - |
 | 🔍 **Translate** | Instant word translation with multiple meanings and auto-save | [docs/features/translate.md](docs/features/translate.md) |
 | 🌐 **Language** | Switch between English and Russian interface | [docs/features/language.md](docs/features/language.md) |
