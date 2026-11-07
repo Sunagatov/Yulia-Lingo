@@ -12,6 +12,11 @@
   [![Docker Pulls](https://img.shields.io/docker/pulls/zufarexplainedit/yulia-lingo-backend.svg)](https://hub.docker.com/r/zufarexplainedit/yulia-lingo-backend/)
   [![GitHub Stars](https://img.shields.io/github/stars/Sunagatov/Yulia-Lingo)](https://github.com/Sunagatov/Yulia-Lingo/stargazers)
   [![GitHub Issues](https://img.shields.io/github/issues/Sunagatov/Yulia-Lingo)](https://github.com/Sunagatov/Yulia-Lingo/issues)
+  <p>
+    <a href="https://buymeacoffee.com/lucky_1uck">
+      <img src="https://img.shields.io/badge/Support_the_project-FFDD00?style=for-the-badge&amp;logo=buymeacoffee&amp;logoColor=black" alt="Support the project" width="260" height="40">
+    </a>
+  </p>
 </div>
 
 ---
@@ -162,6 +167,18 @@ See `.env` for local defaults and `.env.prod` for the production template.
 | 💡 Want a feature | Start a [Discussion](https://github.com/Sunagatov/Yulia-Lingo/discussions) first |
 | 👨‍💻 Ready to code | Pick a [`good first issue`](https://github.com/Sunagatov/Yulia-Lingo/issues?q=is%3Aopen+label%3A%22good+first+issue%22), comment "I'm on it" |
 | 🔧 Big change | Comment on the issue before writing code — tickets may have hidden constraints |
+
+---
+
+## ☕ Support the project
+
+If this project helps you learn or inspires your own work, you can support its development.
+
+<p>
+  <a href="https://buymeacoffee.com/lucky_1uck">
+    <img src="https://img.shields.io/badge/Support_the_project-FFDD00?style=for-the-badge&amp;logo=buymeacoffee&amp;logoColor=black" alt="Support the project" width="260" height="40">
+  </a>
+</p>
 
 ---
 
